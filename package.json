@@ -1,0 +1,12 @@
+{
+  "name": "learnloop",
+  "version": "1.0.0",
+  "description": "LearnLoop - Plataforma de aprendizaje en tiempo real",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.16.0"
+  }
+}
