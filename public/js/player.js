@@ -10,6 +10,8 @@ class PlayerClient extends LearnLoopClient {
         this.currentGameData = null;
         this.gameAnswers = {};
         this.submitted = false;
+        this.selectedAvatar = '🦊';
+        this.nicknameConfirmed = false;
     }
 
     onConnected() {
@@ -350,6 +352,7 @@ class PlayerClient extends LearnLoopClient {
         const rank = myResult ? payload.allPlayers.indexOf(myResult) + 1 : 0;
         
         rankEl.textContent = `#${rank}`;
+        rankEl.className = rank <= 3 ? `rank-${rank}` : 'rank-other';
         
         if (rank === 1) {
             messageEl.textContent = '¡Eres el Champion! 🏆';
@@ -360,6 +363,22 @@ class PlayerClient extends LearnLoopClient {
         }
         
         scoreEl.textContent = myResult ? myResult.totalScore : 0;
+        
+        // Mostrar top 3
+        const top3List = document.getElementById('player-top3-list');
+        const top3 = payload.allPlayers.slice(0, 3);
+        
+        const medals = ['🥇', '🥈', '🥉'];
+        top3List.innerHTML = top3.map((player, i) => {
+            const displayName = player.nickname.split(' ').slice(1).join(' ') || player.nickname;
+            return `
+                <div class="top3-item ${i === 0 ? 'first' : i === 1 ? 'second' : 'third'}">
+                    <span class="top3-rank">${medals[i]}</span>
+                    <span class="top3-name">${displayName}</span>
+                    <span class="top3-score">${player.totalScore}</span>
+                </div>
+            `;
+        }).join('');
     }
 
     onError(payload) {
@@ -392,6 +411,15 @@ document.addEventListener('DOMContentLoaded', () => {
         playerClient.send('JOIN_ROOM', { pin: pin, nickname: '' });
     });
 
+    // Selector de avatar
+    document.querySelectorAll('.avatar-option').forEach(option => {
+        option.addEventListener('click', () => {
+            document.querySelectorAll('.avatar-option').forEach(o => o.classList.remove('selected'));
+            option.classList.add('selected');
+            playerClient.selectedAvatar = option.dataset.avatar;
+        });
+    });
+
     document.getElementById('confirm-nickname-btn').addEventListener('click', () => {
         const nickname = document.getElementById('nickname-input').value.trim();
         if (nickname.length < 2) {
@@ -399,10 +427,17 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        playerClient.nickname = nickname;
+        const btn = document.getElementById('confirm-nickname-btn');
+        
+        // Bloquear botón
+        btn.disabled = true;
+        btn.textContent = '✅ Confirmado';
+        playerClient.nicknameConfirmed = true;
+        
+        playerClient.nickname = playerClient.selectedAvatar + ' ' + nickname;
         playerClient.send('JOIN_ROOM', { 
             pin: playerClient.pin, 
-            nickname: nickname 
+            nickname: playerClient.nickname 
         });
     });
 

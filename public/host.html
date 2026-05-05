@@ -33,6 +33,24 @@
                             <button class="round-btn" onclick="adjustRounds(1)">+</button>
                         </div>
                     </div>
+                    <div class="form-group subjects-group">
+                        <label>Selecciona las Materias:</label>
+                        <p class="hint-text">(Se mezclarán aleatoriamente)</p>
+                        <div class="subjects-selector">
+                            <label class="subject-checkbox">
+                                <input type="checkbox" id="math-subject" checked>
+                                <span class="subject-label">➕ Matemáticas</span>
+                            </label>
+                            <label class="subject-checkbox">
+                                <input type="checkbox" id="english-subject" checked>
+                                <span class="subject-label">🔤 Inglés</span>
+                            </label>
+                            <label class="subject-checkbox">
+                                <input type="checkbox" id="grammar-subject" checked>
+                                <span class="subject-label">📝 Gramática</span>
+                            </label>
+                        </div>
+                    </div>
                     <button id="create-room-btn" class="primary-btn">🚀 Crear Sala</button>
                 </div>
             </section>
@@ -135,26 +153,52 @@
             <!-- Pantalla Final -->
             <section id="final-screen" class="screen">
                 <div class="final-content">
-                    <h1>🏆 ¡Fin del Juego!</h1>
+                    <h1>🏆 CAMPEONATO FINAL</h1>
+                    <p class="championship-subtitle">LearnLoop - Tabla de Posiciones</p>
                     
-                    <div class="final-podium">
-                        <div class="podium-position second">
-                            <div class="position-medal">🥈</div>
-                            <span class="final-name" id="second-name">-</span>
-                            <span class="final-score" id="second-score">0</span>
+                    <div class="championship-board">
+                        <!-- Podio Principal -->
+                        <div class="championship-podium">
+                            <div class="podium-place second-place">
+                                <div class="place-avatar">🥈</div>
+                                <div class="place-rank">2º</div>
+                                <div class="place-name" id="second-name">-</div>
+                                <div class="place-score"><span id="second-score">0</span> pts</div>
+                            </div>
+                            <div class="podium-place first-place">
+                                <div class="crown-icon">👑</div>
+                                <div class="place-avatar">🥇</div>
+                                <div class="place-rank">1º</div>
+                                <div class="place-name" id="first-name">-</div>
+                                <div class="place-score"><span id="first-score">0</span> pts</div>
+                            </div>
+                            <div class="podium-place third-place">
+                                <div class="place-avatar">🥉</div>
+                                <div class="place-rank">3º</div>
+                                <div class="place-name" id="third-name">-</div>
+                                <div class="place-score"><span id="third-score">0</span> pts</div>
+                            </div>
                         </div>
-                        <div class="podium-position first">
-                            <div class="crown">👑</div>
-                            <div class="position-medal">🥇</div>
-                            <span class="final-name" id="first-name">-</span>
-                            <span class="final-score" id="first-score">0</span>
-                        </div>
-                        <div class="podium-position third">
-                            <div class="position-medal">🥉</div>
-                            <span class="final-name" id="third-name">-</span>
-                            <span class="final-score" id="third-score">0</span>
+                        
+                        <!-- Tabla de Posiciones Completa -->
+                        <div class="standings-table">
+                            <h3>📊 Tabla de Posiciones</h3>
+                            <div class="table-header">
+                                <span class="col-pos">Pos</span>
+                                <span class="col-name">Jugador</span>
+                                <span class="col-score">Puntos</span>
+                            </div>
+                            <div id="all-scores-list" class="table-body">
+                                <!-- Generado por JS -->
+                            </div>
                         </div>
                     </div>
+
+                    <div class="final-actions">
+                        <button onclick="location.reload()" class="secondary-btn">🔄 Nueva Partida</button>
+                    </div>
+                </div>
+            </section>
 
                     <div class="all-scores">
                         <h3>Todos los Puntajes</h3>

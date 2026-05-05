@@ -243,13 +243,27 @@ class HostClient extends LearnLoopClient {
         const podiumList = document.getElementById('podium-list');
         const medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'];
         
-        podiumList.innerHTML = payload.top5.map((player, i) => `
-            <div class="podium-item">
-                <span class="podium-rank">${medals[i]}</span>
-                <span class="podium-name">${player.nickname}</span>
-                <span class="podium-score">${player.score} pts</span>
-            </div>
-        `).join('');
+        podiumList.innerHTML = payload.top5.map((player, i) => {
+            const displayName = player.nickname.split(' ').slice(1).join(' ') || player.nickname;
+            return `
+                <div class="podium-item">
+                    <span class="podium-rank">${medals[i]}</span>
+                    <span class="podium-name">${displayName}</span>
+                    <span class="podium-score">${player.score} pts</span>
+                </div>
+            `;
+        }).join('');
+
+        // Si es la última ronda, no mostrar botón de siguiente ronda
+        // Mostrar automáticamente el结果final inmediatamente
+        const nextBtn = document.getElementById('next-round-btn');
+        if (payload.isLastRound) {
+            nextBtn.style.display = 'none';
+            // Llamar directamente para mostrar el resultado final
+            hostClient.send('NEXT_ROUND', {});
+        } else {
+            nextBtn.style.display = 'inline-block';
+        }
     }
 
     onGameEnded(payload) {
@@ -257,20 +271,32 @@ class HostClient extends LearnLoopClient {
         
         const podium = payload.podium;
         
-        document.getElementById('first-name').textContent = podium[0]?.nickname || '-';
+        // Podio principal
+        document.getElementById('first-name').textContent = podium[0]?.nickname.split(' ').slice(1).join(' ') || '-';
         document.getElementById('first-score').textContent = podium[0]?.totalScore || '0';
-        document.getElementById('second-name').textContent = podium[1]?.nickname || '-';
+        document.getElementById('second-name').textContent = podium[1]?.nickname.split(' ').slice(1).join(' ') || '-';
         document.getElementById('second-score').textContent = podium[1]?.totalScore || '0';
-        document.getElementById('third-name').textContent = podium[2]?.nickname || '-';
+        document.getElementById('third-name').textContent = payload.allPlayers.length > 2 ? (podium[2]?.nickname.split(' ').slice(1).join(' ') || '-') : '-';
         document.getElementById('third-score').textContent = payload.allPlayers.length > 2 ? (podium[2]?.totalScore || '0') : '0';
         
+        // Tabla de posiciones completa
         const allScoresList = document.getElementById('all-scores-list');
-        allScoresList.innerHTML = payload.allPlayers.map((player, i) => `
-            <div class="score-row">
-                <span>#${i + 1} ${player.nickname}</span>
-                <span>${player.totalScore} pts</span>
-            </div>
-        `).join('');
+        allScoresList.innerHTML = payload.allPlayers.map((player, i) => {
+            let rowClass = '';
+            if (i === 0) rowClass = 'gold';
+            else if (i === 1) rowClass = 'silver';
+            else if (i === 2) rowClass = 'bronze';
+            
+            const displayName = player.nickname.split(' ').slice(1).join(' ') || player.nickname;
+            
+            return `
+                <div class="table-row ${rowClass}">
+                    <span class="col-pos">${i + 1}º</span>
+                    <span class="col-name">${displayName}</span>
+                    <span class="col-score">${player.totalScore} pts</span>
+                </div>
+            `;
+        }).join('');
     }
 
     onError(payload) {
@@ -290,8 +316,21 @@ document.addEventListener('DOMContentLoaded', () => {
     
     document.getElementById('create-room-btn').addEventListener('click', () => {
         const rounds = parseInt(document.getElementById('rounds-input').value) || 5;
+        
+        // Obtener materias seleccionadas
+        const subjects = [];
+        if (document.getElementById('math-subject').checked) subjects.push('math');
+        if (document.getElementById('english-subject').checked) subjects.push('english');
+        if (document.getElementById('grammar-subject').checked) subjects.push('grammar');
+        
+        if (subjects.length === 0) {
+            alert('Selecciona al menos una materia');
+            return;
+        }
+        
         hostClient.rounds = rounds;
-        hostClient.send('CREATE_ROOM', { rounds });
+        hostClient.subjects = subjects;
+        hostClient.send('CREATE_ROOM', { rounds, subjects });
     });
 
     document.getElementById('start-game-btn').addEventListener('click', () => {

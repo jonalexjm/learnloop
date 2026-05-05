@@ -61,7 +61,24 @@
             <!-- Pantalla de Nickname -->
             <section id="nickname-screen" class="screen">
                 <div class="nickname-card">
-                    <h2>👤 Ingresa tu Nombre</h2>
+                    <h2>👤 Elige tu Avatar</h2>
+                    <div class="avatar-selector">
+                        <div class="avatar-grid" id="avatar-grid">
+                            <div class="avatar-option selected" data-avatar="🦊">🦊</div>
+                            <div class="avatar-option" data-avatar="🐼">🐼</div>
+                            <div class="avatar-option" data-avatar="🦁">🦁</div>
+                            <div class="avatar-option" data-avatar="🐯">🐯</div>
+                            <div class="avatar-option" data-avatar="🐨">🐨</div>
+                            <div class="avatar-option" data-avatar="🦄">🦄</div>
+                            <div class="avatar-option" data-avatar="🐸">🐸</div>
+                            <div class="avatar-option" data-avatar="🐙">🐙</div>
+                            <div class="avatar-option" data-avatar="🦋">🦋</div>
+                            <div class="avatar-option" data-avatar="🌟">🌟</div>
+                            <div class="avatar-option" data-avatar="🔥">🔥</div>
+                            <div class="avatar-option" data-avatar="⚡">⚡</div>
+                        </div>
+                    </div>
+                    <h3>👤 Ingresa tu Nombre</h3>
                     <input type="text" id="nickname-input" maxlength="15" placeholder="Tu apodo">
                     <button id="confirm-nickname-btn" class="primary-btn">Continuar</button>
                 </div>
@@ -132,18 +149,29 @@
                 </div>
             </section>
 
-            <!-- Pantalla de结果 Final -->
+            <!-- Pantalla de Resultado Final -->
             <section id="player-final-screen" class="screen">
                 <div class="player-final">
-                    <h2>🎉 ¡Juego Terminado!</h2>
-                    <div class="final-position-display">
-                        <span id="final-rank">#1</span>
+                    <h2>🏆 Campeonato Final</h2>
+                    
+                    <div class="player-final-result">
+                        <div class="final-position-display">
+                            <span id="final-rank">#1</span>
+                        </div>
+                        <p class="final-message" id="final-message">¡Felicidades!</p>
+                        <div class="final-score-display">
+                            <span>Puntaje Final:</span>
+                            <span id="final-score">0</span>
+                        </div>
                     </div>
-                    <p class="final-message" id="final-message">¡Felicidades!</p>
-                    <div class="final-score-display">
-                        <span>Puntaje Final:</span>
-                        <span id="final-score">0</span>
+                    
+                    <div class="player-top3">
+                        <h3>Top 3 Final</h3>
+                        <div id="player-top3-list" class="top3-list">
+                            <!-- Generado por JS -->
+                        </div>
                     </div>
+                    
                     <button onclick="location.reload()" class="secondary-btn">
                         🔄 Jugar de Nuevo
                     </button>

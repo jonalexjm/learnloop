@@ -91,6 +91,9 @@ wss.on('connection', (ws) => {
             switch (event) {
                 case 'CREATE_ROOM': {
                     const pin = generatePIN();
+                    const subjects = payload.subjects || ['math', 'english', 'grammar'];
+                    const gameOrder = generateGameOrder(subjects, payload.rounds || 5);
+                    
                     const session = {
                         pin,
                         host: ws,
@@ -101,13 +104,15 @@ wss.on('connection', (ws) => {
                         rounds: [],
                         gameHistory: [],
                         createdAt: new Date().toISOString(),
-                        timer: null
+                        timer: null,
+                        subjects: subjects,
+                        gameOrder: gameOrder
                     };
 
                     sessions.set(pin, session);
                     clientInfo = { role: 'host', pin };
-                    ws.send(JSON.stringify({ event: 'ROOM_CREATED', payload: { pin } }));
-                    console.log(`🏠 Sala creada: ${pin}`);
+                    ws.send(JSON.stringify({ event: 'ROOM_CREATED', payload: { pin, subjects } }));
+                    console.log(`🏠 Sala creada: ${pin} - Materias: ${subjects.join(', ')}`);
                     break;
                 }
 
@@ -240,7 +245,7 @@ function startNextRound(session) {
         return;
     }
 
-    const games = getGameForRound(session.currentRound);
+    const games = getGameForRound(session, session.currentRound);
     const round = {
         number: session.currentRound + 1,
         gameType: games.type,
@@ -296,20 +301,23 @@ function startNextRound(session) {
 function finishRound(session) {
     session.state = 'results';
     clearInterval(session.timer);
+    session.currentRound++;
 
-    const round = session.rounds[session.currentRound];
+    const round = session.rounds[session.currentRound - 1];
     const sortedPlayers = Array.from(session.players.entries())
         .map(([ws, p]) => ({ nickname: p.nickname, score: p.totalScore, correct: p.correctAnswers }))
         .sort((a, b) => b.score - a.score);
 
     const top5 = sortedPlayers.slice(0, 5);
+    const isLastRound = session.currentRound >= session.totalRounds;
 
     session.host.send(JSON.stringify({ 
         event: 'ROUND_RESULT', 
         payload: { 
             correctAnswers: round.gameData.correctAnswers,
             top5,
-            roundNumber: round.number
+            roundNumber: round.number,
+            isLastRound: isLastRound
         } 
     }));
 
@@ -570,6 +578,42 @@ function getGameForRound(roundIndex) {
     ];
 
     return games[roundIndex % games.length];
+}
+
+function getGameForRound(session, roundIndex) {
+    const gameIndex = session.gameOrder[roundIndex];
+    const allGames = [
+        { subject: 'math', name: 'Matemáticas: Operaciones', description: 'Arrastra cada operación a su resultado correcto', type: 'drag_drop', timeLimit: 45, data: { background: 'math', items: [{ id: 'i1', text: '5 + 3', correctZone: 'z1' }, { id: 'i2', text: '10 - 4', correctZone: 'z2' }, { id: 'i3', text: '2 × 6', correctZone: 'z3' }, { id: 'i4', text: '15 ÷ 3', correctZone: 'z4' }], dropZones: [{ id: 'z1', text: '8', x: 20, y: 30 }, { id: 'z2', text: '6', x: 50, y: 30 }, { id: 'z3', text: '12', x: 80, y: 30 }, { id: 'z4', text: '5', x: 50, y: 70 }], correctAnswers: [{ zoneId: 'z1', itemId: 'i1' }, { zoneId: 'z2', itemId: 'i2' }, { zoneId: 'z3', itemId: 'i3' }, { zoneId: 'z4', itemId: 'i4' }] } },
+        { subject: 'math', name: 'Matemáticas: Par o Impar', description: 'Clasifica cada número en el contenedor correcto', type: 'classify', timeLimit: 40, data: { categories: [{ id: 'par', label: 'PAR', x: 15, y: 20 }, { id: 'impar', label: 'IMPAR', x: 55, y: 20 }], items: [{ id: 'n1', text: '8', correctCategory: 'par' }, { id: 'n2', text: '15', correctCategory: 'impar' }, { id: 'n3', text: '22', correctCategory: 'par' }, { id: 'n4', text: '31', correctCategory: 'impar' }, { id: 'n5', text: '44', correctCategory: 'par' }, { id: 'n6', text: '57', correctCategory: 'impar' }], correctAnswers: { par: ['n1', 'n3', 'n5'], impar: ['n2', 'n4', 'n6'] } } },
+        { subject: 'english', name: 'Inglés: Vocabulario', description: 'Arrastra cada palabra a su traducción correcta', type: 'drag_drop', timeLimit: 45, data: { background: 'english', items: [{ id: 'i1', text: 'Apple', correctZone: 'z1' }, { id: 'i2', text: 'House', correctZone: 'z2' }, { id: 'i3', text: 'Water', correctZone: 'z3' }, { id: 'i4', text: 'Book', correctZone: 'z4' }], dropZones: [{ id: 'z1', text: '🍎 Manzana', x: 20, y: 30 }, { id: 'z2', text: '🏠 Casa', x: 50, y: 30 }, { id: 'z3', text: '💧 Agua', x: 80, y: 30 }, { id: 'z4', text: '📖 Libro', x: 50, y: 70 }], correctAnswers: [{ zoneId: 'z1', itemId: 'i1' }, { zoneId: 'z2', itemId: 'i2' }, { zoneId: 'z3', itemId: 'i3' }, { zoneId: 'z4', itemId: 'i4' }] } },
+        { subject: 'english', name: 'Inglés: Partes del Discurso', description: 'Clasifica cada palabra: Verbo, Sustantivo o Adjetivo', type: 'classify', timeLimit: 40, data: { categories: [{ id: 'verb', label: 'VERBS', x: 10, y: 20 }, { id: 'noun', label: 'NOUNS', x: 40, y: 20 }, { id: 'adj', label: 'ADJECTIVES', x: 70, y: 20 }], items: [{ id: 'w1', text: 'Run', correctCategory: 'verb' }, { id: 'w2', text: 'Dog', correctCategory: 'noun' }, { id: 'w3', text: 'Beautiful', correctCategory: 'adj' }, { id: 'w4', text: 'Eat', correctCategory: 'verb' }, { id: 'w5', text: 'Car', correctCategory: 'noun' }, { id: 'w6', text: 'Happy', correctCategory: 'adj' }], correctAnswers: { verb: ['w1', 'w4'], noun: ['w2', 'w5'], adj: ['w3', 'w6'] } } },
+        { subject: 'grammar', name: 'Gramática: Acentuación', description: 'Coloca la tilde en la palabra correcta', type: 'drag_drop', timeLimit: 40, data: { background: 'accent', items: [{ id: 'i1', text: 'camion', correctZone: 'z1' }, { id: 'i2', text: 'raton', correctZone: 'z2' }, { id: 'i3', text: 'joven', correctZone: 'z3' }, { id: 'i4', text: 'caliz', correctZone: 'z4' }], dropZones: [{ id: 'z1', text: 'camión', x: 20, y: 30 }, { id: 'z2', text: 'ratón', x: 50, y: 30 }, { id: 'z3', text: 'joven', x: 80, y: 30 }, { id: 'z4', text: 'cáiz', x: 50, y: 70 }], correctAnswers: [{ zoneId: 'z1', itemId: 'i1' }, { zoneId: 'z2', itemId: 'i2' }, { zoneId: 'z3', itemId: 'i3' }, { zoneId: 'z4', itemId: 'i4' }] } },
+        { subject: 'grammar', name: 'Gramática: Clasifica la palabra', description: 'Clasifica cada palabra en su categoría gramatical', type: 'classify', timeLimit: 40, data: { categories: [{ id: 'verbo', label: 'VERBO', x: 10, y: 20 }, { id: 'sustantivo', label: 'SUSTANTIVO', x: 40, y: 20 }, { id: 'adj', label: 'ADJETIVO', x: 70, y: 20 }], items: [{ id: 'p1', text: 'Correr', correctCategory: 'verbo' }, { id: 'p2', text: 'Mesa', correctCategory: 'sustantivo' }, { id: 'p3', text: 'Rojo', correctCategory: 'adj' }, { id: 'p4', text: 'Hablar', correctCategory: 'verbo' }, { id: 'p5', text: 'Libro', correctCategory: 'sustantivo' }, { id: 'p6', text: 'Grande', correctCategory: 'adj' }], correctAnswers: { verbo: ['p1', 'p4'], sustantivo: ['p2', 'p5'], adj: ['p3', 'p6'] } } }
+    ];
+    
+    // Usar el índice directamente del gameOrder que ya tiene los índices correctos de allGames
+    return allGames[gameIndex];
+}
+
+function generateGameOrder(subjects, totalRounds) {
+    const subjectGames = {
+        'math': [0, 1],
+        'english': [2, 3],
+        'grammar': [4, 5]
+    };
+    
+    let availableGames = [];
+    subjects.forEach(sub => {
+        availableGames = availableGames.concat(subjectGames[sub] || []);
+    });
+    
+    const gameOrder = [];
+    for (let i = 0; i < totalRounds; i++) {
+        const randomIndex = Math.floor(Math.random() * availableGames.length);
+        gameOrder.push(availableGames[randomIndex]);
+    }
+    
+    return gameOrder;
 }
 
 server.listen(PORT, () => {
