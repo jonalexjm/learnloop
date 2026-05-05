@@ -77,6 +77,9 @@ class LearnLoopClient {
             case 'SUBMISSION_UPDATE':
                 this.onSubmissionUpdate(payload);
                 break;
+            case 'ALL_SUBMISSIONS_COMPLETE':
+                this.onAllSubmissionsComplete(payload);
+                break;
             case 'ROUND_RESULT':
                 this.onRoundResult(payload);
                 break;
@@ -105,6 +108,7 @@ class LearnLoopClient {
     onStartRound(payload) {}
     onTimerUpdate(payload) {}
     onSubmissionUpdate(payload) {}
+    onAllSubmissionsComplete(payload) {}
     onRoundResult(payload) {}
     onPlayerResult(payload) {}
     onGameEnded(payload) {}

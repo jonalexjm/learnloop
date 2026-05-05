@@ -230,6 +230,22 @@ class HostClient extends LearnLoopClient {
         document.getElementById('submission-count').textContent = payload.submitted;
     }
 
+    onAllSubmissionsComplete(payload) {
+        // Mostrar un indicador visual de que todos han respondido
+        const submissionCount = document.getElementById('submission-count');
+        if (submissionCount) {
+            submissionCount.style.color = '#22c55e';
+            submissionCount.style.fontWeight = 'bold';
+            submissionCount.style.fontSize = '1.2em';
+            
+            // Animar con un pulso
+            submissionCount.style.animation = 'pulse 0.6s ease-in-out 2';
+        }
+        
+        // Log para confirmación
+        console.log('✅ Todos los participantes han respondido. La ronda finalizará automáticamente...');
+    }
+
     onRoundResult(payload) {
         showScreen('results-screen');
         

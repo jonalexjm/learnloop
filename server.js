@@ -207,6 +207,13 @@ wss.on('connection', (ws) => {
                         event: 'ANSWER_RESULT', 
                         payload: { correct: isCorrect, score, totalScore: player.totalScore, streak: player.streak } 
                     }));
+
+                    // Verificar si todos han respondido y finalizar automáticamente
+                    if (checkAllSubmissionsComplete(session)) {
+                        notifyAllSubmissionsComplete(session);
+                        clearInterval(session.timer);
+                        finishRound(session);
+                    }
                     break;
                 }
 
@@ -425,6 +432,23 @@ function validateAnswer(round, answers) {
         return JSON.stringify(answers) === JSON.stringify(gameData.correctAnswers);
     }
     return false;
+}
+
+function checkAllSubmissionsComplete(session) {
+    const round = session.rounds[session.currentRound];
+    if (!round) return false;
+    
+    const submitted = round.submissions?.size || 0;
+    const total = session.players.size;
+    
+    return submitted === total && total > 0;
+}
+
+function notifyAllSubmissionsComplete(session) {
+    broadcastToSession(session, { 
+        event: 'ALL_SUBMISSIONS_COMPLETE', 
+        payload: { totalSubmissions: session.players.size } 
+    });
 }
 
 function getGameForRound(roundIndex) {
