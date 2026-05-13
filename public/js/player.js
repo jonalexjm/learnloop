@@ -12,6 +12,10 @@ class PlayerClient extends LearnLoopClient {
     this.submitted = false;
     this.selectedAvatar = "🦊";
     this.nicknameConfirmed = false;
+    this.touchDragState = {
+      item: null,
+      target: null,
+    };
   }
 
   onConnected() {
@@ -211,9 +215,12 @@ class PlayerClient extends LearnLoopClient {
     element.addEventListener(
       "touchstart",
       (e) => {
-        element.dataset.touchStartY = e.touches[0].clientY;
+        this.touchDragState.item = element;
+        this.touchDragState.target = null;
+        element.classList.add("dragging");
+        element.style.pointerEvents = "none";
       },
-      { passive: true },
+      { passive: false },
     );
 
     element.addEventListener(
@@ -221,30 +228,79 @@ class PlayerClient extends LearnLoopClient {
       (e) => {
         e.preventDefault();
         const touch = e.touches[0];
-        const element = document.elementFromPoint(touch.clientX, touch.clientY);
+        const target = this.getTouchDropTarget(touch.clientX, touch.clientY);
 
-        if (element && element.classList.contains("drop-zone")) {
-          element.classList.add("hover");
+        this.clearTouchHoverStates();
+
+        if (target) {
+          target.classList.add(target.classList.contains("drop-zone") ? "hover" : "drag-over");
+          this.touchDragState.target = target;
         }
       },
       { passive: false },
     );
 
-    element.addEventListener("touchend", (e) => {
+    const finishTouchDrag = (e) => {
       const touch = e.changedTouches[0];
-      const element = document.elementFromPoint(touch.clientX, touch.clientY);
+      const target = this.getTouchDropTarget(touch.clientX, touch.clientY) || this.touchDragState.target;
+      const itemElement = this.touchDragState.item || element;
 
-      if (element && element.classList.contains("drop-zone")) {
-        const zoneId = element.dataset.zoneId;
-        const itemId = e.target.dataset.itemId;
-
-        if (itemId && zoneId) {
-          this.gameAnswers[zoneId] = itemId;
-          e.target.style.display = "none";
-          element.classList.add("correct");
-        }
+      if (target && itemElement) {
+        this.handleTouchDrop(itemElement, target);
       }
+
+      this.clearTouchHoverStates();
+
+      if (itemElement) {
+        itemElement.classList.remove("dragging");
+        itemElement.style.pointerEvents = "";
+      }
+
+      this.touchDragState.item = null;
+      this.touchDragState.target = null;
+    };
+
+    element.addEventListener("touchend", finishTouchDrag);
+    element.addEventListener("touchcancel", finishTouchDrag);
+  }
+
+  getTouchDropTarget(x, y) {
+    const pointElement = document.elementFromPoint(x, y);
+    return pointElement ? pointElement.closest(".drop-zone, .category-box") : null;
+  }
+
+  clearTouchHoverStates() {
+    document.querySelectorAll(".drop-zone.hover, .category-box.drag-over").forEach((target) => {
+      target.classList.remove("hover", "drag-over");
     });
+  }
+
+  handleTouchDrop(itemElement, target) {
+    const itemId = itemElement?.dataset?.itemId;
+    if (!itemId || !target) return;
+
+    if (target.classList.contains("drop-zone")) {
+      const zoneId = target.dataset.zoneId;
+      if (!zoneId) return;
+
+      this.gameAnswers[zoneId] = itemId;
+      itemElement.style.display = "none";
+      target.classList.add("correct");
+      return;
+    }
+
+    if (target.classList.contains("category-box")) {
+      const categoryId = target.dataset.categoryId;
+      if (!categoryId) return;
+
+      this.gameAnswers[itemId] = categoryId;
+      const itemsContainer = target.querySelector(".category-items");
+
+      if (itemsContainer) {
+        itemsContainer.appendChild(itemElement);
+        itemElement.draggable = false;
+      }
+    }
   }
 
   initClassifyGame() {
