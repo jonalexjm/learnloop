@@ -139,7 +139,7 @@ function generateQRCode(pin) {
   // Limpiar contenedor anterior
   qrContainer.innerHTML = "";
 
-  const url = `${window.location.origin}/player.html?pin=${pin}`;
+  const url = window.location.origin;
 
   // Usar API de QRServer que genera QR confiable como imagen
   const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
