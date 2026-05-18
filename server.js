@@ -447,11 +447,25 @@ wss.on("connection", (ws) => {
           const round = session.rounds[session.currentRound];
           if (!round) return;
 
-          const isCorrect = validateAnswer(round, payload.answers);
-          player.correctAnswers += isCorrect ? 1 : 0;
-          player.streak = isCorrect ? player.streak + 1 : 0;
+          const userAnswers = payload.answers || [];
+          const correctAnswers = round.gameData.correctAnswers || [];
 
-          const score = calculateScore(isCorrect, payload.timeRemaining, round.timeLimit, player.streak);
+          const zoneResults = correctAnswers.map((ca) => {
+            const userAnswer = userAnswers.find((ua) => ua.zoneId === ca.zoneId);
+            const isMatch = userAnswer && userAnswer.itemId === ca.itemId;
+            return {
+              zoneId: ca.zoneId,
+              correct: isMatch,
+              userItemId: userAnswer ? userAnswer.itemId : null,
+              correctItemId: ca.itemId,
+            };
+          });
+
+          const allCorrect = zoneResults.every((zr) => zr.correct);
+          player.correctAnswers += allCorrect ? 1 : 0;
+          player.streak = allCorrect ? player.streak + 1 : 0;
+
+          const score = calculateScore(allCorrect, payload.timeRemaining, round.timeLimit, player.streak);
           player.totalScore += score;
 
           if (!round.submissions) round.submissions = new Set();
@@ -467,7 +481,13 @@ wss.on("connection", (ws) => {
           ws.send(
             JSON.stringify({
               event: "ANSWER_RESULT",
-              payload: { correct: isCorrect, score, totalScore: player.totalScore, streak: player.streak },
+              payload: {
+                correct: allCorrect,
+                score,
+                totalScore: player.totalScore,
+                streak: player.streak,
+                zoneResults,
+              },
             }),
           );
 

@@ -1450,6 +1450,56 @@ body {
   box-shadow: 0 0 24px rgba(34, 197, 94, 0.5);
 }
 
+.drop-zone.sense-zone.wrong {
+  background: rgba(220, 38, 38, 0.4);
+  border-color: #ef4444;
+  border-style: solid;
+  box-shadow: 0 0 24px rgba(239, 68, 68, 0.5);
+  animation: shake 0.5s ease;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translate(-50%, -50%) translateX(0); }
+  20% { transform: translate(-50%, -50%) translateX(-6px); }
+  40% { transform: translate(-50%, -50%) translateX(6px); }
+  60% { transform: translate(-50%, -50%) translateX(-4px); }
+  80% { transform: translate(-50%, -50%) translateX(4px); }
+}
+
+.sense-feedback {
+  text-align: center;
+  padding: 10px 0;
+}
+
+.sense-feedback-msg {
+  font-size: 1.3rem;
+  font-weight: 800;
+  padding: 10px 20px;
+  border-radius: 12px;
+  display: inline-block;
+}
+
+.sense-feedback-msg.correct {
+  color: #22c55e;
+  background: rgba(22, 163, 74, 0.15);
+}
+
+.sense-feedback-msg.wrong {
+  color: #ef4444;
+  background: rgba(220, 38, 38, 0.15);
+}
+
+.sense-feedback-detail {
+  margin-top: 8px;
+  font-size: 1rem;
+  color: var(--gray);
+}
+
+.sense-feedback-detail strong {
+  color: #f87171;
+  font-weight: 700;
+}
+
 .senses-items-row {
   display: flex;
   justify-content: center;

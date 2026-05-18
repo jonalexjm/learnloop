@@ -68,8 +68,15 @@ class PlayerClient extends LearnLoopClient {
     this.gameAnswers = {};
     this.submitted = false;
 
-    document.getElementById("submit-answer-btn").disabled = false;
-    document.getElementById("submit-answer-btn").textContent = "✅ Enviar Respuesta";
+    const submitBtn = document.getElementById("submit-answer-btn");
+    submitBtn.disabled = false;
+    submitBtn.textContent = "✅ Enviar Respuesta";
+    submitBtn.onclick = () => {
+      this.submitAnswer();
+    };
+
+    const existingFeedback = document.querySelector(".sense-feedback");
+    if (existingFeedback) existingFeedback.remove();
 
     showScreen("player-game-screen");
     this.renderPlayerGame(payload);
@@ -443,6 +450,56 @@ class PlayerClient extends LearnLoopClient {
   }
 
   onPlayerResult(payload) {
+    const zoneResults = payload.zoneResults || [];
+    const gameArea = document.getElementById("player-game-area");
+    const submitBtn = document.getElementById("submit-answer-btn");
+
+    if (zoneResults.length > 0) {
+      zoneResults.forEach((zr) => {
+        const zone = document.querySelector(`.drop-zone[data-zone-id="${zr.zoneId}"]`);
+        if (!zone) return;
+
+        if (zr.correct) {
+          zone.classList.add("correct");
+          zone.classList.remove("wrong");
+        } else {
+          zone.classList.add("wrong");
+          zone.classList.remove("correct");
+        }
+      });
+
+      const wrongZones = zoneResults.filter((zr) => !zr.correct);
+      const feedbackEl = document.createElement("div");
+      feedbackEl.className = "sense-feedback";
+
+      if (wrongZones.length === 0) {
+        feedbackEl.innerHTML = `<div class="sense-feedback-msg correct">🎉 ¡Perfect! All senses are correct!</div>`;
+      } else {
+        const wrongNames = wrongZones.map((zr) => {
+          const correctItem = this.currentGameData.items.find((i) => i.id === zr.correctItemId);
+          return correctItem ? correctItem.label : zr.zoneId;
+        });
+        feedbackEl.innerHTML = `
+          <div class="sense-feedback-msg wrong">❌ Some senses are wrong!</div>
+          <div class="sense-feedback-detail">Fix: <strong>${wrongNames.join(", ")}</strong></div>
+        `;
+      }
+
+      gameArea.parentElement.insertBefore(feedbackEl, submitBtn);
+      submitBtn.textContent = "➡ Continue";
+      submitBtn.disabled = false;
+      submitBtn.onclick = () => {
+        this.showFinalResult(payload);
+        submitBtn.onclick = () => {
+          this.submitAnswer();
+        };
+      };
+    } else {
+      this.showFinalResult(payload);
+    }
+  }
+
+  showFinalResult(payload) {
     showScreen("player-result-screen");
 
     const feedback = document.getElementById("result-feedback");
