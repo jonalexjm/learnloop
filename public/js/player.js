@@ -20,7 +20,6 @@ class PlayerClient extends LearnLoopClient {
 
   onConnected() {
     updateConnectionStatus(true);
-
     const urlParams = new URLSearchParams(window.location.search);
     const pinFromUrl = urlParams.get("pin");
     if (pinFromUrl) {
@@ -48,24 +47,18 @@ class PlayerClient extends LearnLoopClient {
 
   onRoundIntro(payload) {
     showScreen("player-intro-screen");
-
     document.getElementById("player-game-title").textContent = payload.gameName;
     document.getElementById("player-game-desc").textContent = payload.description;
-
     this.startPlayerCountdown(3);
   }
 
   startPlayerCountdown(seconds) {
     const countdownEl = document.getElementById("player-countdown");
     let count = seconds;
-
     const interval = setInterval(() => {
       countdownEl.textContent = count;
       count--;
-
-      if (count < 0) {
-        clearInterval(interval);
-      }
+      if (count < 0) clearInterval(interval);
     }, 1000);
   }
 
@@ -85,7 +78,6 @@ class PlayerClient extends LearnLoopClient {
 
   renderPlayerGame(payload) {
     const gameArea = document.getElementById("player-game-area");
-
     if (payload.gameType === "drag_drop") {
       gameArea.innerHTML = this.renderDragDropGame(payload.gameData);
       this.initDragDropGame();
@@ -99,68 +91,127 @@ class PlayerClient extends LearnLoopClient {
     const dropZones = gameData.dropZones
       .map(
         (zone) => `
-            <div class="drop-zone" data-zone-id="${zone.id}" 
-                 style="left: ${zone.x}%; top: ${zone.y}%;">
-                ${zone.text}
-            </div>
-        `,
+        <div class="drop-zone sense-zone" data-zone-id="${zone.id}"
+             style="position:absolute; left:${zone.x}%; top:${zone.y}%; transform:translate(-50%,-50%);">
+          <span class="sense-zone-label">${zone.label}</span>
+        </div>
+      `,
       )
       .join("");
 
     const items = gameData.items
       .map(
         (item) => `
-            <div class="drag-item" data-item-id="${item.id}" draggable="true">
-                ${item.text}
-            </div>
-        `,
+        <div class="drag-item sense-card" data-item-id="${item.id}" draggable="true">
+          <span class="sense-card-icon">${item.icon || ""}</span>
+          <span class="sense-card-label">${item.label}</span>
+        </div>
+      `,
       )
       .join("");
 
     return `
-            <div class="drag-game-container">
-                <div class="game-area" style="position: relative; min-height: 350px;">
-                    ${dropZones}
-                </div>
-                <div class="items-row" id="items-pool">
-                    ${items}
-                </div>
-            </div>
-        `;
+      <div class="drag-game-container senses-game-container">
+        <p class="sense-instruction">🧒 Drag each sense to the correct part of the face!</p>
+        <div class="senses-board">
+          <svg class="face-svg" viewBox="0 0 400 480" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <radialGradient id="headGrad" cx="50%" cy="40%">
+                <stop offset="0%" stop-color="#fde68a"/>
+                <stop offset="100%" stop-color="#fbbf24"/>
+              </radialGradient>
+              <radialGradient id="cheekGrad" cx="50%" cy="50%">
+                <stop offset="0%" stop-color="#fca5a5"/>
+                <stop offset="100%" stop-color="#f87171" stop-opacity="0"/>
+              </radialGradient>
+            </defs>
+            <!-- Hair -->
+            <ellipse cx="200" cy="140" rx="155" ry="120" fill="#92400e"/>
+            <ellipse cx="200" cy="120" rx="150" ry="100" fill="#b45309"/>
+            <!-- Head -->
+            <ellipse cx="200" cy="220" rx="130" ry="155" fill="url(#headGrad)" stroke="#d97706" stroke-width="3"/>
+            <!-- Left ear -->
+            <ellipse cx="68" cy="230" rx="30" ry="45" fill="#fbbf24" stroke="#d97706" stroke-width="3"/>
+            <ellipse cx="68" cy="230" rx="18" ry="30" fill="#fde68a"/>
+            <!-- Right ear -->
+            <ellipse cx="332" cy="230" rx="30" ry="45" fill="#fbbf24" stroke="#d97706" stroke-width="3"/>
+            <ellipse cx="332" cy="230" rx="18" ry="30" fill="#fde68a"/>
+            <!-- Hair bangs -->
+            <path d="M 80 150 Q 120 100 200 95 Q 280 100 320 150 Q 300 120 200 110 Q 100 120 80 150Z" fill="#b45309"/>
+            <!-- Left eye -->
+            <ellipse cx="150" cy="195" rx="28" ry="30" fill="#fff" stroke="#92400e" stroke-width="2"/>
+            <circle cx="150" cy="197" r="14" fill="#3b82f6"/>
+            <circle cx="150" cy="197" r="8" fill="#1e3a5f"/>
+            <circle cx="145" cy="190" r="5" fill="#fff"/>
+            <!-- Right eye -->
+            <ellipse cx="250" cy="195" rx="28" ry="30" fill="#fff" stroke="#92400e" stroke-width="2"/>
+            <circle cx="250" cy="197" r="14" fill="#3b82f6"/>
+            <circle cx="250" cy="197" r="8" fill="#1e3a5f"/>
+            <circle cx="245" cy="190" r="5" fill="#fff"/>
+            <!-- Eyelashes -->
+            <path d="M 122 185 L 115 178" stroke="#92400e" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M 130 172 L 125 164" stroke="#92400e" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M 278 185 L 285 178" stroke="#92400e" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M 270 172 L 275 164" stroke="#92400e" stroke-width="2.5" stroke-linecap="round"/>
+            <!-- Eyebrows -->
+            <path d="M 120 158 Q 150 145 180 158" stroke="#92400e" stroke-width="4" fill="none" stroke-linecap="round"/>
+            <path d="M 220 158 Q 250 145 280 158" stroke="#92400e" stroke-width="4" fill="none" stroke-linecap="round"/>
+            <!-- Nose -->
+            <path d="M 200 215 Q 188 248 195 258 Q 200 263 205 258 Q 212 248 200 215Z" fill="#f59e0b" stroke="#d97706" stroke-width="2"/>
+            <!-- Cheeks -->
+            <circle cx="118" cy="260" r="22" fill="url(#cheekGrad)" opacity="0.6"/>
+            <circle cx="282" cy="260" r="22" fill="url(#cheekGrad)" opacity="0.6"/>
+            <!-- Mouth - big smile -->
+            <path d="M 148 300 Q 200 348 252 300" stroke="#dc2626" stroke-width="4" fill="#fca5a5" stroke-linecap="round"/>
+            <!-- Teeth hint -->
+            <path d="M 165 305 Q 200 315 235 305" stroke="#fff" stroke-width="2" fill="none"/>
+            <!-- Neck -->
+            <rect x="175" y="365" width="50" height="40" rx="10" fill="#fde68a" stroke="#d97706" stroke-width="2"/>
+            <!-- Shirt -->
+            <path d="M 130 400 Q 200 380 270 400 L 280 480 L 120 480Z" fill="#38bdf8" stroke="#0ea5e9" stroke-width="3"/>
+            <path d="M 175 395 Q 200 410 225 395" stroke="#0ea5e9" stroke-width="2" fill="none"/>
+          </svg>
+          ${dropZones}
+        </div>
+        <div class="items-row senses-items-row" id="items-pool">
+          ${items}
+        </div>
+      </div>
+    `;
   }
 
   renderClassifyGame(gameData) {
     const categories = gameData.categories
       .map(
         (cat) => `
-            <div class="category-box" data-category-id="${cat.id}">
-                <h4>${cat.label}</h4>
-                <div class="category-items" data-category="${cat.id}"></div>
-            </div>
-        `,
+        <div class="category-box" data-category-id="${cat.id}">
+          <h4>${cat.label}</h4>
+          <div class="category-items" data-category="${cat.id}"></div>
+        </div>
+      `,
       )
       .join("");
 
     const items = gameData.items
       .map(
         (item) => `
-            <div class="classify-item" data-item-id="${item.id}" draggable="true">
-                ${item.text}
-            </div>
-        `,
+        <div class="classify-item" data-item-id="${item.id}" draggable="true">
+          ${item.text}
+        </div>
+      `,
       )
       .join("");
 
     return `
-            <div class="classify-game-container">
-                <div class="categories-row">
-                    ${categories}
-                </div>
-                <div class="items-pool" id="items-pool">
-                    ${items}
-                </div>
-            </div>
-        `;
+      <div class="classify-game-container">
+        <div class="categories-row">
+          ${categories}
+        </div>
+        <div class="items-pool" id="items-pool">
+          ${items}
+        </div>
+      </div>
+    `;
   }
 
   initDragDropGame() {
@@ -351,7 +402,6 @@ class PlayerClient extends LearnLoopClient {
 
   startPlayerTimer(seconds) {
     const timerEl = document.getElementById("player-timer");
-
     let remaining = seconds;
 
     const interval = setInterval(() => {
@@ -444,7 +494,6 @@ class PlayerClient extends LearnLoopClient {
 
     scoreEl.textContent = myResult ? myResult.totalScore : 0;
 
-    // Mostrar top 3
     const top3List = document.getElementById("player-top3-list");
     const top3 = payload.allPlayers.slice(0, 3);
 
@@ -453,12 +502,12 @@ class PlayerClient extends LearnLoopClient {
       .map((player, i) => {
         const displayName = player.nickname.split(" ").slice(1).join(" ") || player.nickname;
         return `
-                <div class="top3-item ${i === 0 ? "first" : i === 1 ? "second" : "third"}">
-                    <span class="top3-rank">${medals[i]}</span>
-                    <span class="top3-name">${displayName}</span>
-                    <span class="top3-score">${player.totalScore}</span>
-                </div>
-            `;
+          <div class="top3-item ${i === 0 ? "first" : i === 1 ? "second" : "third"}">
+            <span class="top3-rank">${medals[i]}</span>
+            <span class="top3-name">${displayName}</span>
+            <span class="top3-score">${player.totalScore}</span>
+          </div>
+        `;
       })
       .join("");
   }
@@ -493,7 +542,6 @@ document.addEventListener("DOMContentLoaded", () => {
     playerClient.send("JOIN_ROOM", { pin: pin, nickname: "" });
   });
 
-  // Selector de avatar
   document.querySelectorAll(".avatar-option").forEach((option) => {
     option.addEventListener("click", () => {
       document.querySelectorAll(".avatar-option").forEach((o) => o.classList.remove("selected"));
@@ -510,8 +558,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const btn = document.getElementById("confirm-nickname-btn");
-
-    // Bloquear botón
     btn.disabled = true;
     btn.textContent = "✅ Confirmado";
     playerClient.nicknameConfirmed = true;
@@ -548,12 +594,9 @@ document.addEventListener("DOMContentLoaded", () => {
           ctx.drawImage(video, 0, 0);
 
           const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-          // Decodificar QR usando jsQR
           const code = jsQR(imageData.data, imageData.width, imageData.height);
 
           if (code) {
-            // Extraer PIN de la URL
             const urlParams = new URLSearchParams(new URL(code.data).search);
             const pin = urlParams.get("pin");
 
