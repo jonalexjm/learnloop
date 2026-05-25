@@ -132,14 +132,16 @@ function updateConnectionStatus(connected) {
   }
 }
 
-function generateQRCode(pin) {
+function generateQRCode(pin, baseUrl = "") {
   const qrContainer = document.getElementById("qr-canvas");
   if (!qrContainer) return;
 
   // Limpiar contenedor anterior
   qrContainer.innerHTML = "";
 
-  const url = window.location.origin;
+  const origin = baseUrl || window.location.origin;
+  const normalizedOrigin = origin.endsWith("/") ? origin.slice(0, -1) : origin;
+  const url = `${normalizedOrigin}/player.html?pin=${pin}`;
 
   // Usar API de QRServer que genera QR confiable como imagen
   const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;

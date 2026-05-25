@@ -3,7 +3,7 @@
 class HostClient extends LearnLoopClient {
   constructor() {
     super();
-    this.rounds = 5;
+    this.rounds = 1;
     this.currentRound = 0;
     this.totalPlayers = 0;
   }
@@ -19,7 +19,7 @@ class HostClient extends LearnLoopClient {
   onRoomCreated(payload) {
     this.pin = payload.pin;
     document.getElementById("room-pin").textContent = this.pin;
-    generateQRCode(this.pin);
+    generateQRCode(this.pin, this.qrBaseUrl || "");
     showScreen("lobby-screen");
   }
 
@@ -66,6 +66,7 @@ class HostClient extends LearnLoopClient {
       container.innerHTML = '<p class="empty-msg">Esperando jugadores...</p>';
       return;
     }
+  }
 
     container.innerHTML = players
       .map(
@@ -122,8 +123,9 @@ class HostClient extends LearnLoopClient {
 
   getGameTypeLabel(type) {
     const labels = {
-      drag_drop: "🎯 Arrastre",
+      drag_drop: "🎯 Drag & Drop",
       classify: "📂 Clasificar",
+      drawing: "🎨 Dibujo",
     };
     return labels[type] || "🎮 Juego";
   }
@@ -132,39 +134,54 @@ class HostClient extends LearnLoopClient {
     const display = document.getElementById("game-display");
     const gameData = payload.gameData;
 
-    if (payload.gameType === "drag_drop") {
+    if (gameData?.mode === "senses_svg") {
+      display.innerHTML = this.renderSensesHost(gameData);
+    } else if (payload.gameType === "drawing") {
+      display.innerHTML = this.renderDrawingHost(gameData);
+    } else if (payload.gameType === "drag_drop") {
       display.innerHTML = this.renderDragDropHost(gameData);
     } else if (payload.gameType === "classify") {
       display.innerHTML = this.renderClassifyHost(gameData);
     }
   }
 
-  renderDragDropHost(gameData) {
-    const dropZones = (gameData.dropZones || [])
-      .map(
-        (zone) => `
-            <div class="drop-zone sense-zone" style="position:absolute; left:${zone.x}%; top:${zone.y}%; transform:translate(-50%,-50%);" data-zone-id="${zone.id}">
-                <span class="sense-zone-label">${zone.label}</span>
-            </div>
-        `,
-      )
-      .join("");
+  renderSensesHost(gameData) {
+    const left = (gameData.dropZones || []).filter((zone) => zone.side === "left");
+    const right = (gameData.dropZones || []).filter((zone) => zone.side !== "left");
 
-    const items = (gameData.items || [])
+    return `
+            <div class="host-senses-preview">
+                <p style="text-align:center; color:var(--gray); margin-bottom: 14px;">Players are matching senses to the correct body part.</p>
+                <div class="host-senses-layout">
+                    <div class="host-senses-side">
+                        ${left.map((zone) => `<div class="host-sense-chip">${zone.text}</div>`).join("")}
+                    </div>
+                    <div class="host-senses-center">
+                        <img src="${gameData.svgPath}" alt="Body silhouette">
+                    </div>
+                    <div class="host-senses-side">
+                        ${right.map((zone) => `<div class="host-sense-chip">${zone.text}</div>`).join("")}
+                    </div>
+                </div>
+            </div>
+        `;
+  }
+
+  renderDragDropHost(gameData) {
+    const items = gameData.items
       .map(
         (item) => `
-            <div class="drag-item sense-card" data-item-id="${item.id}">
-                <span class="sense-card-icon">${item.icon || ""}</span>
-                <span class="sense-card-label">${item.label}</span>
+            <div class="drag-item" data-item-id="${item.id}">
+                ${item.text}
             </div>
         `,
       )
       .join("");
 
     return `
-            <div class="drag-game-container senses-game-container">
-                <p style="text-align:center; color:var(--gray); margin-bottom:15px;">
-                    Los jugadores están arrastrando los sentidos al rostro...
+            <div class="drag-game-container" style="position: relative; height: 400px;">
+                <p style="text-align: center; color: var(--gray); margin-bottom: 20px;">
+                    Los jugadores están resolviendo el juego...
                 </p>
                 <div class="senses-board">
                     <svg class="face-svg" viewBox="0 0 400 480" xmlns="http://www.w3.org/2000/svg">
@@ -216,6 +233,17 @@ class HostClient extends LearnLoopClient {
                 </div>
             </div>
         `;
+  }
+
+  renderDrawingHost(gameData) {
+    return `
+        <div class="drawing-host-preview">
+          <p class="drawing-host-prompt">${gameData.prompt || "Dibuja algo creativo."}</p>
+          <div class="drawing-host-canvas">
+            <span>Los jugadores estan dibujando...</span>
+          </div>
+        </div>
+      `;
   }
 
   renderClassifyHost(gameData) {
@@ -297,13 +325,20 @@ class HostClient extends LearnLoopClient {
   }
 
   onAllSubmissionsComplete(payload) {
+    // Mostrar un indicador visual de que todos han respondido
     const submissionCount = document.getElementById("submission-count");
     if (submissionCount) {
       submissionCount.style.color = "#22c55e";
       submissionCount.style.fontWeight = "bold";
       submissionCount.style.fontSize = "1.2em";
+
+      // Animar con un pulso
       submissionCount.style.animation = "pulse 0.6s ease-in-out 2";
     }
+    console.log("✅ Todos los participantes han respondido. La ronda finalizará automáticamente...");
+  }
+
+    // Log para confirmación
     console.log("✅ Todos los participantes han respondido. La ronda finalizará automáticamente...");
   }
 
@@ -313,9 +348,22 @@ class HostClient extends LearnLoopClient {
     document.getElementById("result-title").textContent = `Resultados - Ronda ${payload.roundNumber}`;
 
     const solutionDisplay = document.getElementById("solution-display");
-    solutionDisplay.innerHTML = payload.correctAnswers
-      .map((ca) => `<span style="padding: 10px 20px; background: var(--gradient); border-radius: 10px;">✓</span>`)
-      .join("");
+    if (payload.drawings && payload.drawings.length) {
+      solutionDisplay.innerHTML = payload.drawings
+        .map(
+          (entry) => `
+            <div class="drawing-result-card">
+              <img src="${entry.drawing}" alt="Dibujo de ${entry.nickname}" />
+              <div class="drawing-result-name">${entry.nickname}</div>
+            </div>
+          `,
+        )
+        .join("");
+    } else {
+      solutionDisplay.innerHTML = (payload.correctAnswers || [])
+        .map(() => `<span style="padding: 10px 20px; background: var(--gradient); border-radius: 10px;">✓</span>`)
+        .join("");
+    }
 
     const podiumList = document.getElementById("podium-list");
     const medals = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣"];
@@ -333,9 +381,12 @@ class HostClient extends LearnLoopClient {
       })
       .join("");
 
+    // Si es la última ronda, no mostrar botón de siguiente ronda
+    // Mostrar automáticamente el结果final inmediatamente
     const nextBtn = document.getElementById("next-round-btn");
     if (payload.isLastRound) {
       nextBtn.style.display = "none";
+      // Llamar directamente para mostrar el resultado final
       hostClient.send("NEXT_ROUND", {});
     } else {
       nextBtn.style.display = "inline-block";
@@ -347,6 +398,7 @@ class HostClient extends LearnLoopClient {
 
     const podium = payload.podium;
 
+    // Podio principal
     document.getElementById("first-name").textContent = podium[0]?.nickname.split(" ").slice(1).join(" ") || "-";
     document.getElementById("first-score").textContent = podium[0]?.totalScore || "0";
     document.getElementById("second-name").textContent = podium[1]?.nickname.split(" ").slice(1).join(" ") || "-";
@@ -356,6 +408,7 @@ class HostClient extends LearnLoopClient {
     document.getElementById("third-score").textContent =
       payload.allPlayers.length > 2 ? podium[2]?.totalScore || "0" : "0";
 
+    // Tabla de posiciones completa
     const allScoresList = document.getElementById("all-scores-list");
     allScoresList.innerHTML = payload.allPlayers
       .map((player, i) => {
@@ -392,11 +445,25 @@ const hostClient = new HostClient();
 document.addEventListener("DOMContentLoaded", () => {
   hostClient.connect();
 
+  const urlInput = document.getElementById("qr-base-url");
+  const savedBaseUrl = localStorage.getItem("qrBaseUrl");
+  if (urlInput && savedBaseUrl) {
+    urlInput.value = savedBaseUrl;
+  }
+
   document.getElementById("create-room-btn").addEventListener("click", () => {
-    const rounds = parseInt(document.getElementById("rounds-input").value) || 5;
+    const rounds = 2;
+    const subjects = ["senses", "drawing"];
+
+    const baseUrl = urlInput ? urlInput.value.trim() : "";
+    if (baseUrl) {
+      localStorage.setItem("qrBaseUrl", baseUrl);
+    }
+    hostClient.qrBaseUrl = baseUrl || localStorage.getItem("qrBaseUrl") || "";
+
     hostClient.rounds = rounds;
-    hostClient.subjects = ["english"];
-    hostClient.send("CREATE_ROOM", { rounds, subjects: ["english"] });
+    hostClient.subjects = subjects;
+    hostClient.send("CREATE_ROOM", { rounds, subjects });
   });
 
   document.getElementById("start-game-btn").addEventListener("click", () => {
@@ -410,7 +477,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function adjustRounds(delta) {
   const input = document.getElementById("rounds-input");
-  let value = parseInt(input.value) + delta;
+  if (!input) return;
+  let value = Number.parseInt(input.value, 10) + delta;
   value = Math.max(1, Math.min(10, value));
   input.value = value;
 }

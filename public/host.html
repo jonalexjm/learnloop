@@ -1,208 +1,195 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>LearnLoop - Vista Profesor</title>
-    <link rel="stylesheet" href="css/styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-</head>
-<body class="host-view">
+    <link rel="stylesheet" href="css/styles.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  </head>
+  <body class="host-view">
     <div class="host-container">
-        <header class="host-header">
-            <div class="host-logo">
-                <span class="logo-icon">🧠</span>
-                <h1>LearnLoop</h1>
+      <header class="host-header">
+        <div class="host-logo">
+          <span class="logo-icon">🧠</span>
+          <h1>LearnLoop</h1>
+        </div>
+        <div class="connection-status">
+          <span class="status-dot"></span>
+          <span id="connection-text">Conectando...</span>
+        </div>
+      </header>
+
+      <main id="main-screen">
+        <!-- Pantalla de Inicio -->
+        <section id="start-screen" class="screen active">
+          <div class="setup-card">
+            <h2>🎮 Five Senses + Dibujo</h2>
+            <div class="form-group">
+              <label for="rounds-input">Round:</label>
+              <div class="rounds-selector fixed-rounds-selector">
+                <input type="number" id="rounds-input" value="2" min="2" max="2" readonly />
+              </div>
             </div>
-            <div class="connection-status">
-                <span class="status-dot"></span>
-                <span id="connection-text">Conectando...</span>
+            <div class="form-group">
+              <label for="qr-base-url">URL base para el QR:</label>
+              <input type="text" id="qr-base-url" class="url-input" placeholder="https://tusala.com" />
+              <p class="hint-text">Se agregara /player.html?pin=XXXX automaticamente.</p>
             </div>
-        </header>
+            <div class="form-group subjects-group">
+              <p class="setup-static-label">Temas:</p>
+              <div class="subjects-selector fixed-subjects-selector">
+                <span class="subject-tag english">👀 Five Senses</span>
+                <span class="subject-tag grammar">🎨 Dibujo</span>
+              </div>
+            </div>
+            <button id="create-room-btn" class="primary-btn">🚀 Crear Sala</button>
+          </div>
+        </section>
 
-        <main id="main-screen">
-            <!-- Pantalla de Inicio -->
-            <section id="start-screen" class="screen active">
-                <div class="setup-card">
-                    <h2>🎮 Configurar Nueva Partida</h2>
-                    <div class="form-group">
-                        <label for="rounds-input">Número de Rondas:</label>
-                        <div class="rounds-selector">
-                            <button class="round-btn" onclick="adjustRounds(-1)">−</button>
-                            <input type="number" id="rounds-input" value="5" min="1" max="10">
-                            <button class="round-btn" onclick="adjustRounds(1)">+</button>
-                        </div>
-                    </div>
-                    <div class="form-group subjects-group">
-                        <label>Juego:</label>
-                        <p class="hint-text">Los cinco sentidos en inglés</p>
-                        <div class="subjects-selector">
-                            <div class="subject-pill">🧒 The Five Senses</div>
-                        </div>
-                    </div>
-                    <button id="create-room-btn" class="primary-btn">🚀 Crear Sala</button>
+        <!-- Pantalla de Lobby -->
+        <section id="lobby-screen" class="screen">
+          <div class="lobby-content">
+            <div class="room-info">
+              <div class="pin-display">
+                <span class="pin-label">PIN de la Sala</span>
+                <span id="room-pin" class="pin-code">----</span>
+              </div>
+              <div class="qr-section">
+                <div id="qr-canvas" style="width: 200px; height: 200px; margin: 0 auto"></div>
+                <p class="qr-hint">Escanea para entrar</p>
+              </div>
+            </div>
+
+            <div class="players-section">
+              <h3>👥 Jugadores Conectados</h3>
+              <div id="players-list" class="players-grid">
+                <p class="empty-msg">Esperando jugadores...</p>
+              </div>
+              <div class="player-count"><span id="player-count">0</span> / 20 jugadores</div>
+            </div>
+
+            <div class="lobby-controls">
+              <button id="start-game-btn" class="primary-btn" disabled>▶ Iniciar Juego</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Pantalla de Introducción -->
+        <section id="intro-screen" class="screen">
+          <div class="intro-content">
+            <div class="intro-countdown">
+              <span id="countdown">3</span>
+            </div>
+            <h2 id="game-title">¡Próximo Juego!</h2>
+            <p id="game-description">Preparate...</p>
+            <div class="round-info">Ronda <span id="current-round">1</span> de <span id="total-rounds">1</span></div>
+          </div>
+        </section>
+
+        <!-- Pantalla de Juego -->
+        <section id="game-screen" class="screen">
+          <div class="game-header-bar">
+            <div class="game-title-bar">
+              <span id="game-type-badge">Juego</span>
+              <span id="game-name-display">Matemáticas</span>
+            </div>
+            <div class="timer-display">
+              <div class="timer-circle">
+                <svg viewBox="0 0 100 100">
+                  <circle class="timer-bg" cx="50" cy="50" r="45" />
+                  <circle class="timer-progress" id="timer-circle" cx="50" cy="50" r="45" />
+                </svg>
+                <span id="timer-text">45</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="game-area">
+            <div id="game-display" class="game-display">
+              <!-- El contenido del juego se genera dinámicamente -->
+            </div>
+          </div>
+
+          <div class="submission-bar">
+            <span>Respuestas recibidas:</span>
+            <span id="submission-count">0</span> / <span id="total-players">0</span>
+          </div>
+        </section>
+
+        <!-- Pantalla de Resultados -->
+        <section id="results-screen" class="screen">
+          <div class="results-content">
+            <h2 id="result-title">Resultados de la Ronda</h2>
+
+            <div class="solution-reveal" id="solution-reveal">
+              <h3>✅ Solución Correcta</h3>
+              <div id="solution-display"></div>
+            </div>
+
+            <div class="podium">
+              <h3>🏆 Top 5</h3>
+              <div id="podium-list" class="podium-list"></div>
+            </div>
+
+            <div class="results-controls">
+              <button id="next-round-btn" class="primary-btn">Siguiente Ronda ➡</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Pantalla Final -->
+        <section id="final-screen" class="screen">
+          <div class="final-content">
+            <h1>🏆 CAMPEONATO FINAL</h1>
+
+            <div class="championship-board">
+              <!-- Podio Principal -->
+              <div class="championship-podium">
+                <div class="podium-place second-place">
+                  <div class="place-avatar">🥈</div>
+                  <div class="place-rank">2º</div>
+                  <div class="place-name" id="second-name">-</div>
+                  <div class="place-score"><span id="second-score">0</span> pts</div>
                 </div>
-            </section>
-
-            <!-- Pantalla de Lobby -->
-            <section id="lobby-screen" class="screen">
-                <div class="lobby-content">
-                    <div class="room-info">
-                        <div class="pin-display">
-                            <span class="pin-label">PIN de la Sala</span>
-                            <span id="room-pin" class="pin-code">----</span>
-                        </div>
-                        <div class="qr-section">
-                            <div id="qr-canvas" style="width: 200px; height: 200px; margin: 0 auto;"></div>
-                            <p class="qr-hint">Escanea para entrar</p>
-                        </div>
-                    </div>
-
-                    <div class="players-section">
-                        <h3>👥 Jugadores Conectados</h3>
-                        <div id="players-list" class="players-grid">
-                            <p class="empty-msg">Esperando jugadores...</p>
-                        </div>
-                        <div class="player-count">
-                            <span id="player-count">0</span> / 20 jugadores
-                        </div>
-                    </div>
-
-                    <div class="lobby-controls">
-                        <button id="start-game-btn" class="primary-btn" disabled>▶ Iniciar Juego</button>
-                    </div>
+                <div class="podium-place first-place">
+                  <div class="crown-icon">👑</div>
+                  <div class="place-avatar">🥇</div>
+                  <div class="place-rank">1º</div>
+                  <div class="place-name" id="first-name">-</div>
+                  <div class="place-score"><span id="first-score">0</span> pts</div>
                 </div>
-            </section>
-
-            <!-- Pantalla de Introducción -->
-            <section id="intro-screen" class="screen">
-                <div class="intro-content">
-                    <div class="intro-countdown">
-                        <span id="countdown">3</span>
-                    </div>
-                    <h2 id="game-title">¡Próximo Juego!</h2>
-                    <p id="game-description">Preparate...</p>
-                    <div class="round-info">
-                        Ronda <span id="current-round">1</span> de <span id="total-rounds">5</span>
-                    </div>
+                <div class="podium-place third-place">
+                  <div class="place-avatar">🥉</div>
+                  <div class="place-rank">3º</div>
+                  <div class="place-name" id="third-name">-</div>
+                  <div class="place-score"><span id="third-score">0</span> pts</div>
                 </div>
-            </section>
+              </div>
 
-            <!-- Pantalla de Juego -->
-            <section id="game-screen" class="screen">
-                <div class="game-header-bar">
-                    <div class="game-title-bar">
-                        <span id="game-type-badge">Juego</span>
-                        <span id="game-name-display">Matemáticas</span>
-                    </div>
-                    <div class="timer-display">
-                        <div class="timer-circle">
-                            <svg viewBox="0 0 100 100">
-                                <circle class="timer-bg" cx="50" cy="50" r="45"/>
-                                <circle class="timer-progress" id="timer-circle" cx="50" cy="50" r="45"/>
-                            </svg>
-                            <span id="timer-text">45</span>
-                        </div>
-                    </div>
+              <!-- Tabla de Posiciones Completa -->
+              <div class="standings-table">
+                <h3>📊 Tabla de Posiciones</h3>
+                <div class="table-header">
+                  <span class="col-pos">Pos</span>
+                  <span class="col-name">Jugador</span>
+                  <span class="col-score">Puntos</span>
                 </div>
-
-                <div class="game-area">
-                    <div id="game-display" class="game-display">
-                        <!-- El contenido del juego se genera dinámicamente -->
-                    </div>
+                <div id="all-scores-list" class="table-body">
+                  <!-- Generado por JS -->
                 </div>
+              </div>
+            </div>
 
-                <div class="submission-bar">
-                    <span>Respuestas recibidas:</span>
-                    <span id="submission-count">0</span> / <span id="total-players">0</span>
-                </div>
-            </section>
-
-            <!-- Pantalla de Resultados -->
-            <section id="results-screen" class="screen">
-                <div class="results-content">
-                    <h2 id="result-title">Resultados de la Ronda</h2>
-                    
-                    <div class="solution-reveal" id="solution-reveal">
-                        <h3>✅ Solución Correcta</h3>
-                        <div id="solution-display"></div>
-                    </div>
-
-                    <div class="podium">
-                        <h3>🏆 Top 5</h3>
-                        <div id="podium-list" class="podium-list"></div>
-                    </div>
-
-                    <div class="results-controls">
-                        <button id="next-round-btn" class="primary-btn">Siguiente Ronda ➡</button>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Pantalla Final -->
-            <section id="final-screen" class="screen">
-                <div class="final-content">
-                    <h1>🏆 CAMPEONATO FINAL</h1>
-                    
-                    
-                    <div class="championship-board">
-                        <!-- Podio Principal -->
-                        <div class="championship-podium">
-                            <div class="podium-place second-place">
-                                <div class="place-avatar">🥈</div>
-                                <div class="place-rank">2º</div>
-                                <div class="place-name" id="second-name">-</div>
-                                <div class="place-score"><span id="second-score">0</span> pts</div>
-                            </div>
-                            <div class="podium-place first-place">
-                                <div class="crown-icon">👑</div>
-                                <div class="place-avatar">🥇</div>
-                                <div class="place-rank">1º</div>
-                                <div class="place-name" id="first-name">-</div>
-                                <div class="place-score"><span id="first-score">0</span> pts</div>
-                            </div>
-                            <div class="podium-place third-place">
-                                <div class="place-avatar">🥉</div>
-                                <div class="place-rank">3º</div>
-                                <div class="place-name" id="third-name">-</div>
-                                <div class="place-score"><span id="third-score">0</span> pts</div>
-                            </div>
-                        </div>
-                        
-                        <!-- Tabla de Posiciones Completa -->
-                        <div class="standings-table">
-                            <h3>📊 Tabla de Posiciones</h3>
-                            <div class="table-header">
-                                <span class="col-pos">Pos</span>
-                                <span class="col-name">Jugador</span>
-                                <span class="col-score">Puntos</span>
-                            </div>
-                            <div id="all-scores-list" class="table-body">
-                                <!-- Generado por JS -->
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="final-actions">
-                        <button onclick="location.reload()" class="secondary-btn">🔄 Nueva Partida</button>
-                    </div>
-                </div>
-            </section>
-
-                    <div class="all-scores">
-                        <h3>Todos los Puntajes</h3>
-                        <div id="all-scores-list"></div>
-                    </div>
-
-                    <div class="final-actions">
-                        <button onclick="location.reload()" class="secondary-btn">🔄 Nueva Partida</button>
-                    </div>
-                </div>
-            </section>
-        </main>
+            <div class="final-actions">
+              <button onclick="location.reload()" class="secondary-btn">🔄 Nueva Partida</button>
+            </div>
+          </div>
+        </section>
+      </main>
     </div>
 
     <script src="js/app.js"></script>
     <script src="js/host.js"></script>
-</body>
+  </body>
 </html>

@@ -8,14 +8,21 @@ class PlayerClient extends LearnLoopClient {
     this.streak = 0;
     this.currentGameType = null;
     this.currentGameData = null;
+    this.currentAnswerMode = null;
     this.gameAnswers = {};
     this.submitted = false;
     this.selectedAvatar = "🦊";
     this.nicknameConfirmed = false;
-    this.touchDragState = {
-      item: null,
-      target: null,
-    };
+    this.selectedSenseItemId = null;
+    this.isTouchDraggingSense = false;
+    this.touchSenseGhost = null;
+    this.isDrawing = false;
+    this.currentDrawingDataUrl = null;
+    this.drawingCanvas = null;
+    this.drawingContext = null;
+    this.drawingColor = "#111827";
+    this.drawingSize = 8;
+    this.playerTimerInterval = null;
   }
 
   onConnected() {
@@ -35,10 +42,6 @@ class PlayerClient extends LearnLoopClient {
     this.playerId = payload.playerId;
     document.getElementById("player-room-pin").textContent = this.pin;
     showScreen("nickname-screen");
-  }
-
-  onError(payload) {
-    alert("Error: " + payload.message);
   }
 
   onGameStarting(payload) {
@@ -65,8 +68,19 @@ class PlayerClient extends LearnLoopClient {
   onStartRound(payload) {
     this.currentGameType = payload.gameType;
     this.currentGameData = payload.gameData;
+    this.currentAnswerMode = payload.answerMode || null;
     this.gameAnswers = {};
     this.submitted = false;
+    this.selectedSenseItemId = null;
+    this.clearTouchSenseGhost();
+    this.isDrawing = false;
+    this.currentDrawingDataUrl = null;
+    this.drawingCanvas = null;
+    this.drawingContext = null;
+    if (this.playerTimerInterval) {
+      clearInterval(this.playerTimerInterval);
+      this.playerTimerInterval = null;
+    }
 
     const submitBtn = document.getElementById("submit-answer-btn");
     submitBtn.disabled = false;
@@ -85,7 +99,14 @@ class PlayerClient extends LearnLoopClient {
 
   renderPlayerGame(payload) {
     const gameArea = document.getElementById("player-game-area");
-    if (payload.gameType === "drag_drop") {
+
+    if (payload.gameData?.mode === "senses_svg") {
+      gameArea.innerHTML = this.renderSensesSVGGame(payload.gameData);
+      this.initSensesSVGGame(payload.gameData);
+    } else if (payload.gameType === "drawing") {
+      gameArea.innerHTML = this.renderDrawingGame(payload.gameData);
+      this.initDrawingGame(payload.gameData);
+    } else if (payload.gameType === "drag_drop") {
       gameArea.innerHTML = this.renderDragDropGame(payload.gameData);
       this.initDragDropGame();
     } else if (payload.gameType === "classify") {
@@ -219,6 +240,464 @@ class PlayerClient extends LearnLoopClient {
         </div>
       </div>
     `;
+  }
+
+  renderSensesSVGGame(gameData) {
+    const items = gameData.items
+      .map(
+        (item) => `
+          <button type="button" class="sense-item-card" data-item-id="${item.id}" draggable="true">
+            <span class="sense-item-icon">${item.icon || "✨"}</span>
+            <span class="sense-item-label">${item.text}</span>
+          </button>
+        `,
+      )
+      .join("");
+
+    return `
+      <div class="senses-game-shell">
+        <div class="senses-instruction">${gameData.instruction || "Drag each sense to the correct place."}</div>
+        <div class="senses-layout">
+          <div class="senses-side-column" id="senses-left-zones"></div>
+          <div class="senses-svg-stage">
+            <div class="senses-svg-frame" id="senses-svg-frame"></div>
+          </div>
+          <div class="senses-side-column" id="senses-right-zones"></div>
+        </div>
+        <div class="senses-items-pool" id="senses-items-pool">
+          ${items}
+        </div>
+      </div>
+    `;
+  }
+
+  renderDrawingGame(gameData) {
+    const colors = (gameData.colors || ["#111827"]).map(
+      (color) => `
+        <button type="button" class="drawing-color" data-color="${color}" style="background:${color}"></button>
+      `,
+    );
+
+    const sizes = (gameData.brushSizes || [6, 10, 14]).map(
+      (size, index) => `
+        <button type="button" class="drawing-size ${index === 1 ? "selected" : ""}" data-size="${size}">
+          ${size}px
+        </button>
+      `,
+    );
+
+    return `
+      <div class="drawing-shell">
+        <div class="drawing-header">
+          <span class="drawing-prompt">${gameData.prompt || "Dibuja lo que imagines."}</span>
+        </div>
+        <div class="drawing-toolbar">
+          <div class="drawing-colors">
+            ${colors.join("")}
+          </div>
+          <div class="drawing-sizes">
+            ${sizes.join("")}
+          </div>
+          <button type="button" class="drawing-clear" id="drawing-clear">🧽 Borrar</button>
+        </div>
+        <div class="drawing-canvas-wrap">
+          <canvas id="drawing-canvas" width="720" height="420"></canvas>
+        </div>
+      </div>
+    `;
+  }
+
+  initDrawingGame(gameData) {
+    const canvas = document.getElementById("drawing-canvas");
+    if (!canvas) return;
+
+    this.drawingCanvas = canvas;
+    this.drawingContext = canvas.getContext("2d");
+    this.isDrawing = false;
+
+    const ctx = this.drawingContext;
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+    ctx.strokeStyle = this.drawingColor;
+    ctx.lineWidth = this.drawingSize;
+
+    const setCanvasSize = () => {
+      const wrap = canvas.parentElement;
+      if (!wrap) return;
+      const rect = wrap.getBoundingClientRect();
+      const scale = window.devicePixelRatio || 1;
+      const width = Math.min(720, Math.floor(rect.width));
+      const height = Math.floor((width * 7) / 12);
+
+      canvas.width = width * scale;
+      canvas.height = height * scale;
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(scale, scale);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, width, height);
+    };
+
+    setCanvasSize();
+    this.currentDrawingDataUrl = canvas.toDataURL("image/png");
+    window.addEventListener("resize", setCanvasSize);
+
+    const startDraw = (point) => {
+      this.isDrawing = true;
+      ctx.beginPath();
+      ctx.moveTo(point.x, point.y);
+    };
+
+    const drawMove = (point) => {
+      if (!this.isDrawing) return;
+      ctx.lineTo(point.x, point.y);
+      ctx.stroke();
+    };
+
+    const endDraw = () => {
+      if (!this.isDrawing) return;
+      this.isDrawing = false;
+      ctx.closePath();
+      this.currentDrawingDataUrl = canvas.toDataURL("image/png");
+    };
+
+    const getPoint = (event) => {
+      const rect = canvas.getBoundingClientRect();
+      const touch = event.touches ? event.touches[0] : null;
+      const clientX = touch ? touch.clientX : event.clientX;
+      const clientY = touch ? touch.clientY : event.clientY;
+      return { x: clientX - rect.left, y: clientY - rect.top };
+    };
+
+    canvas.addEventListener("mousedown", (event) => startDraw(getPoint(event)));
+    canvas.addEventListener("mousemove", (event) => drawMove(getPoint(event)));
+    canvas.addEventListener("mouseup", endDraw);
+    canvas.addEventListener("mouseleave", endDraw);
+
+    canvas.addEventListener(
+      "touchstart",
+      (event) => {
+        event.preventDefault();
+        startDraw(getPoint(event));
+      },
+      { passive: false },
+    );
+
+    canvas.addEventListener(
+      "touchmove",
+      (event) => {
+        event.preventDefault();
+        drawMove(getPoint(event));
+      },
+      { passive: false },
+    );
+
+    canvas.addEventListener(
+      "touchend",
+      (event) => {
+        event.preventDefault();
+        endDraw();
+      },
+      { passive: false },
+    );
+
+    const colorButtons = document.querySelectorAll(".drawing-color");
+    colorButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        colorButtons.forEach((b) => b.classList.remove("selected"));
+        btn.classList.add("selected");
+        this.drawingColor = btn.dataset.color || this.drawingColor;
+        ctx.strokeStyle = this.drawingColor;
+      });
+    });
+
+    if (colorButtons[0]) colorButtons[0].classList.add("selected");
+
+    const sizeButtons = document.querySelectorAll(".drawing-size");
+    sizeButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        sizeButtons.forEach((b) => b.classList.remove("selected"));
+        btn.classList.add("selected");
+        this.drawingSize = Number.parseInt(btn.dataset.size, 10) || this.drawingSize;
+        ctx.lineWidth = this.drawingSize;
+      });
+    });
+
+    const clearBtn = document.getElementById("drawing-clear");
+    if (clearBtn) {
+      clearBtn.addEventListener("click", () => {
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        this.currentDrawingDataUrl = canvas.toDataURL("image/png");
+      });
+    }
+  }
+
+  async initSensesSVGGame(gameData) {
+    this.setupSensesSideTargets(gameData);
+
+    const frame = document.getElementById("senses-svg-frame");
+    if (frame && gameData.svgPath) {
+      try {
+        const response = await fetch(gameData.svgPath);
+        if (response.ok) {
+          frame.innerHTML = await response.text();
+        } else {
+          frame.innerHTML = `<img src="${gameData.svgPath}" alt="Body outline" class="senses-fallback-image">`;
+        }
+      } catch {
+        frame.innerHTML = `<img src="${gameData.svgPath}" alt="Body outline" class="senses-fallback-image">`;
+      }
+    }
+
+    const cards = document.querySelectorAll(".sense-item-card");
+    cards.forEach((card) => this.makeSenseItemDraggable(card));
+  }
+
+  setupSensesSideTargets(gameData) {
+    const leftColumn = document.getElementById("senses-left-zones");
+    const rightColumn = document.getElementById("senses-right-zones");
+
+    if (!leftColumn || !rightColumn) {
+      return;
+    }
+
+    const zones = gameData.dropZones || [];
+    const leftZones = zones.filter((zone) => zone.side === "left");
+    const rightZones = zones.filter((zone) => zone.side !== "left");
+
+    leftColumn.innerHTML = leftZones
+      .map(
+        (zone) => `
+          <div class="sense-target" data-zone-id="${zone.id}" data-zone-name="${zone.text}">
+            <div class="sense-target-name">${zone.text}</div>
+            <div class="sense-target-value">Drop Here</div>
+          </div>
+        `,
+      )
+      .join("");
+
+    rightColumn.innerHTML = rightZones
+      .map(
+        (zone) => `
+          <div class="sense-target" data-zone-id="${zone.id}" data-zone-name="${zone.text}">
+            <div class="sense-target-name">${zone.text}</div>
+            <div class="sense-target-value">Drop Here</div>
+          </div>
+        `,
+      )
+      .join("");
+
+    const targets = document.querySelectorAll(".sense-target");
+    targets.forEach((target) => {
+      target.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        target.classList.add("hover");
+      });
+
+      target.addEventListener("dragleave", () => {
+        target.classList.remove("hover");
+      });
+
+      target.addEventListener("drop", (e) => {
+        e.preventDefault();
+        target.classList.remove("hover");
+
+        const itemId = e.dataTransfer.getData("text/plain");
+        this.assignSenseToZone(itemId, target.dataset.zoneId);
+      });
+
+      target.addEventListener("click", () => {
+        if (this.selectedSenseItemId) {
+          this.assignSenseToZone(this.selectedSenseItemId, target.dataset.zoneId);
+        }
+      });
+    });
+  }
+
+  makeSenseItemDraggable(card) {
+    card.addEventListener("dragstart", (e) => {
+      e.dataTransfer.setData("text/plain", card.dataset.itemId);
+      card.classList.add("dragging");
+    });
+
+    card.addEventListener("dragend", () => {
+      card.classList.remove("dragging");
+    });
+
+    card.addEventListener("click", () => {
+      if (card.dataset.ignoreClick === "true") {
+        card.dataset.ignoreClick = "false";
+        return;
+      }
+
+      const itemId = card.dataset.itemId;
+
+      if (this.selectedSenseItemId === itemId) {
+        this.selectedSenseItemId = null;
+      } else {
+        this.selectedSenseItemId = itemId;
+      }
+
+      document.querySelectorAll(".sense-item-card").forEach((el) => {
+        el.classList.toggle("selected", el.dataset.itemId === this.selectedSenseItemId);
+      });
+    });
+
+    card.addEventListener(
+      "touchstart",
+      () => {
+        this.isTouchDraggingSense = false;
+        this.selectedSenseItemId = card.dataset.itemId;
+        card.classList.add("dragging");
+
+        document.querySelectorAll(".sense-item-card").forEach((el) => {
+          el.classList.toggle("selected", el.dataset.itemId === this.selectedSenseItemId);
+        });
+      },
+      { passive: true },
+    );
+
+    card.addEventListener(
+      "touchmove",
+      (e) => {
+        e.preventDefault();
+
+        const touch = e.touches[0];
+        if (!touch) {
+          return;
+        }
+
+        if (!this.isTouchDraggingSense) {
+          this.isTouchDraggingSense = true;
+          this.createTouchSenseGhost(card, touch);
+        }
+
+        this.updateTouchSenseGhostPosition(touch);
+        const elementAtPoint = document.elementFromPoint(touch.clientX, touch.clientY);
+        const target = elementAtPoint?.closest(".sense-target");
+
+        document.querySelectorAll(".sense-target").forEach((zone) => zone.classList.remove("hover"));
+        if (target) {
+          target.classList.add("hover");
+        }
+      },
+      { passive: false },
+    );
+
+    card.addEventListener("touchend", (e) => {
+      card.classList.remove("dragging");
+      document.querySelectorAll(".sense-target").forEach((zone) => zone.classList.remove("hover"));
+
+      if (!this.isTouchDraggingSense) {
+        this.clearTouchSenseGhost();
+        return;
+      }
+
+      const touch = e.changedTouches[0];
+      const elementAtPoint = document.elementFromPoint(touch.clientX, touch.clientY);
+      const target = elementAtPoint?.closest(".sense-target");
+
+      if (target?.dataset?.zoneId) {
+        this.assignSenseToZone(card.dataset.itemId, target.dataset.zoneId);
+      }
+
+      card.dataset.ignoreClick = "true";
+      this.isTouchDraggingSense = false;
+      this.clearTouchSenseGhost();
+    });
+
+    card.addEventListener("touchcancel", () => {
+      card.classList.remove("dragging");
+      this.isTouchDraggingSense = false;
+      this.clearTouchSenseGhost();
+      document.querySelectorAll(".sense-target").forEach((zone) => zone.classList.remove("hover"));
+    });
+  }
+
+  createTouchSenseGhost(card, touch) {
+    this.clearTouchSenseGhost();
+
+    const ghost = card.cloneNode(true);
+    const width = Math.max(card.getBoundingClientRect().width, 96);
+
+    ghost.classList.add("sense-item-ghost");
+    ghost.setAttribute("aria-hidden", "true");
+    ghost.style.width = `${Math.round(width)}px`;
+
+    document.body.appendChild(ghost);
+    this.touchSenseGhost = ghost;
+    this.updateTouchSenseGhostPosition(touch);
+  }
+
+  updateTouchSenseGhostPosition(touch) {
+    if (!this.touchSenseGhost || !touch) {
+      return;
+    }
+
+    this.touchSenseGhost.style.left = `${touch.clientX}px`;
+    this.touchSenseGhost.style.top = `${touch.clientY}px`;
+  }
+
+  clearTouchSenseGhost() {
+    if (!this.touchSenseGhost) {
+      return;
+    }
+
+    this.touchSenseGhost.remove();
+    this.touchSenseGhost = null;
+  }
+
+  assignSenseToZone(itemId, zoneId) {
+    if (!itemId || !zoneId) {
+      return;
+    }
+
+    const previousZoneForItem = Object.keys(this.gameAnswers).find(
+      (existingZoneId) => this.gameAnswers[existingZoneId] === itemId,
+    );
+
+    if (previousZoneForItem && previousZoneForItem !== zoneId) {
+      delete this.gameAnswers[previousZoneForItem];
+    }
+
+    this.gameAnswers[zoneId] = itemId;
+    this.selectedSenseItemId = null;
+
+    const cards = document.querySelectorAll(".sense-item-card");
+    cards.forEach((card) => {
+      const cardItemId = card.dataset.itemId;
+      const isPlaced = Object.values(this.gameAnswers).includes(cardItemId);
+      card.classList.toggle("placed", isPlaced);
+      card.classList.remove("selected");
+    });
+
+    this.refreshSenseTargets();
+  }
+
+  refreshSenseTargets() {
+    const targets = document.querySelectorAll(".sense-target");
+    targets.forEach((target) => {
+      const zoneId = target.dataset.zoneId;
+      const valueEl = target.querySelector(".sense-target-value");
+      const itemId = this.gameAnswers[zoneId];
+
+      if (!valueEl) {
+        return;
+      }
+
+      if (!itemId) {
+        valueEl.textContent = "Drop Here";
+        target.classList.remove("filled");
+        return;
+      }
+
+      const item = this.currentGameData.items.find((entry) => entry.id === itemId);
+      valueEl.textContent = item ? `${item.icon || ""} ${item.text}`.trim() : "Drop Here";
+      target.classList.add("filled");
+    });
   }
 
   initDragDropGame() {
@@ -411,12 +890,17 @@ class PlayerClient extends LearnLoopClient {
     const timerEl = document.getElementById("player-timer");
     let remaining = seconds;
 
-    const interval = setInterval(() => {
+    if (this.playerTimerInterval) {
+      clearInterval(this.playerTimerInterval);
+    }
+
+    this.playerTimerInterval = setInterval(() => {
       timerEl.textContent = remaining;
       remaining--;
 
       if (remaining < 0) {
-        clearInterval(interval);
+        clearInterval(this.playerTimerInterval);
+        this.playerTimerInterval = null;
         if (!this.submitted) {
           this.submitAnswer();
         }
@@ -433,15 +917,30 @@ class PlayerClient extends LearnLoopClient {
     if (this.submitted) return;
 
     this.submitted = true;
+    if (this.playerTimerInterval) {
+      clearInterval(this.playerTimerInterval);
+      this.playerTimerInterval = null;
+    }
     document.getElementById("submit-answer-btn").disabled = true;
     document.getElementById("submit-answer-btn").textContent = "⏳ Enviado...";
 
-    const timeRemaining = parseInt(document.getElementById("player-timer").textContent);
+    const timeRemaining = Number.parseInt(document.getElementById("player-timer").textContent, 10);
 
-    const answers = Object.entries(this.gameAnswers).map(([zoneId, itemId]) => ({
+    let answers = Object.entries(this.gameAnswers).map(([zoneId, itemId]) => ({
       zoneId,
       itemId,
     }));
+
+    if (this.currentAnswerMode === "drawing") {
+      answers = { drawing: this.currentDrawingDataUrl || this.drawingCanvas?.toDataURL("image/png") || "" };
+    }
+
+    if (this.currentAnswerMode === "item_to_zone") {
+      answers = Object.entries(this.gameAnswers).map(([zoneId, itemId]) => ({
+        itemId,
+        zoneId,
+      }));
+    }
 
     this.send("SUBMIT_ANSWER", {
       answers: answers,
