@@ -66,6 +66,7 @@ class HostClient extends LearnLoopClient {
       container.innerHTML = '<p class="empty-msg">Esperando jugadores...</p>';
       return;
     }
+  }
 
     container.innerHTML = players
       .map(
@@ -182,7 +183,52 @@ class HostClient extends LearnLoopClient {
                 <p style="text-align: center; color: var(--gray); margin-bottom: 20px;">
                     Los jugadores están resolviendo el juego...
                 </p>
-                <div style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; margin-top: 100px;">
+                <div class="senses-board">
+                    <svg class="face-svg" viewBox="0 0 400 480" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <radialGradient id="headGradH" cx="50%" cy="40%">
+                                <stop offset="0%" stop-color="#fde68a"/>
+                                <stop offset="100%" stop-color="#fbbf24"/>
+                            </radialGradient>
+                            <radialGradient id="cheekGradH" cx="50%" cy="50%">
+                                <stop offset="0%" stop-color="#fca5a5"/>
+                                <stop offset="100%" stop-color="#f87171" stop-opacity="0"/>
+                            </radialGradient>
+                        </defs>
+                        <ellipse cx="200" cy="140" rx="155" ry="120" fill="#92400e"/>
+                        <ellipse cx="200" cy="120" rx="150" ry="100" fill="#b45309"/>
+                        <ellipse cx="200" cy="220" rx="130" ry="155" fill="url(#headGradH)" stroke="#d97706" stroke-width="3"/>
+                        <ellipse cx="68" cy="230" rx="30" ry="45" fill="#fbbf24" stroke="#d97706" stroke-width="3"/>
+                        <ellipse cx="68" cy="230" rx="18" ry="30" fill="#fde68a"/>
+                        <ellipse cx="332" cy="230" rx="30" ry="45" fill="#fbbf24" stroke="#d97706" stroke-width="3"/>
+                        <ellipse cx="332" cy="230" rx="18" ry="30" fill="#fde68a"/>
+                        <path d="M 80 150 Q 120 100 200 95 Q 280 100 320 150 Q 300 120 200 110 Q 100 120 80 150Z" fill="#b45309"/>
+                        <ellipse cx="150" cy="195" rx="28" ry="30" fill="#fff" stroke="#92400e" stroke-width="2"/>
+                        <circle cx="150" cy="197" r="14" fill="#3b82f6"/>
+                        <circle cx="150" cy="197" r="8" fill="#1e3a5f"/>
+                        <circle cx="145" cy="190" r="5" fill="#fff"/>
+                        <ellipse cx="250" cy="195" rx="28" ry="30" fill="#fff" stroke="#92400e" stroke-width="2"/>
+                        <circle cx="250" cy="197" r="14" fill="#3b82f6"/>
+                        <circle cx="250" cy="197" r="8" fill="#1e3a5f"/>
+                        <circle cx="245" cy="190" r="5" fill="#fff"/>
+                        <path d="M 122 185 L 115 178" stroke="#92400e" stroke-width="2.5" stroke-linecap="round"/>
+                        <path d="M 130 172 L 125 164" stroke="#92400e" stroke-width="2.5" stroke-linecap="round"/>
+                        <path d="M 278 185 L 285 178" stroke="#92400e" stroke-width="2.5" stroke-linecap="round"/>
+                        <path d="M 270 172 L 275 164" stroke="#92400e" stroke-width="2.5" stroke-linecap="round"/>
+                        <path d="M 120 158 Q 150 145 180 158" stroke="#92400e" stroke-width="4" fill="none" stroke-linecap="round"/>
+                        <path d="M 220 158 Q 250 145 280 158" stroke="#92400e" stroke-width="4" fill="none" stroke-linecap="round"/>
+                        <path d="M 200 215 Q 188 248 195 258 Q 200 263 205 258 Q 212 248 200 215Z" fill="#f59e0b" stroke="#d97706" stroke-width="2"/>
+                        <circle cx="118" cy="260" r="22" fill="url(#cheekGradH)" opacity="0.6"/>
+                        <circle cx="282" cy="260" r="22" fill="url(#cheekGradH)" opacity="0.6"/>
+                        <path d="M 148 300 Q 200 348 252 300" stroke="#dc2626" stroke-width="4" fill="#fca5a5" stroke-linecap="round"/>
+                        <path d="M 165 305 Q 200 315 235 305" stroke="#fff" stroke-width="2" fill="none"/>
+                        <rect x="175" y="365" width="50" height="40" rx="10" fill="#fde68a" stroke="#d97706" stroke-width="2"/>
+                        <path d="M 130 400 Q 200 380 270 400 L 280 480 L 120 480Z" fill="#38bdf8" stroke="#0ea5e9" stroke-width="3"/>
+                        <path d="M 175 395 Q 200 410 225 395" stroke="#0ea5e9" stroke-width="2" fill="none"/>
+                    </svg>
+                    ${dropZones}
+                </div>
+                <div style="display:flex; justify-content:center; gap:20px; flex-wrap:wrap; margin-top:20px;">
                     ${items}
                 </div>
             </div>
@@ -289,6 +335,8 @@ class HostClient extends LearnLoopClient {
       // Animar con un pulso
       submissionCount.style.animation = "pulse 0.6s ease-in-out 2";
     }
+    console.log("✅ Todos los participantes han respondido. La ronda finalizará automáticamente...");
+  }
 
     // Log para confirmación
     console.log("✅ Todos los participantes han respondido. La ronda finalizará automáticamente...");
