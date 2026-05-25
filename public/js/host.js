@@ -19,7 +19,7 @@ class HostClient extends LearnLoopClient {
   onRoomCreated(payload) {
     this.pin = payload.pin;
     document.getElementById("room-pin").textContent = this.pin;
-    generateQRCode(this.pin);
+    generateQRCode(this.pin, this.qrBaseUrl || "");
     showScreen("lobby-screen");
   }
 
@@ -397,9 +397,21 @@ const hostClient = new HostClient();
 document.addEventListener("DOMContentLoaded", () => {
   hostClient.connect();
 
+  const urlInput = document.getElementById("qr-base-url");
+  const savedBaseUrl = localStorage.getItem("qrBaseUrl");
+  if (urlInput && savedBaseUrl) {
+    urlInput.value = savedBaseUrl;
+  }
+
   document.getElementById("create-room-btn").addEventListener("click", () => {
     const rounds = 2;
     const subjects = ["senses", "drawing"];
+
+    const baseUrl = urlInput ? urlInput.value.trim() : "";
+    if (baseUrl) {
+      localStorage.setItem("qrBaseUrl", baseUrl);
+    }
+    hostClient.qrBaseUrl = baseUrl || localStorage.getItem("qrBaseUrl") || "";
 
     hostClient.rounds = rounds;
     hostClient.subjects = subjects;
