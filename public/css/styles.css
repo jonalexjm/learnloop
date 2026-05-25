@@ -704,6 +704,142 @@ body {
   color: var(--success);
 }
 
+/* Drawing Game */
+.drawing-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.drawing-header {
+  text-align: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.drawing-prompt {
+  color: var(--light);
+}
+
+.drawing-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--dark);
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.drawing-colors,
+.drawing-sizes {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.drawing-color {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+
+.drawing-color.selected {
+  border-color: var(--light);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
+}
+
+.drawing-size {
+  background: var(--dark-light);
+  color: var(--light);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.drawing-size.selected {
+  background: var(--gradient);
+  border-color: transparent;
+}
+
+.drawing-clear {
+  background: var(--dark-light);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--light);
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.drawing-canvas-wrap {
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+#drawing-canvas {
+  width: 100%;
+  max-width: 720px;
+  border-radius: 12px;
+  background: #ffffff;
+  touch-action: none;
+}
+
+.drawing-host-preview {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.drawing-host-prompt {
+  color: var(--gray);
+}
+
+.drawing-host-canvas {
+  height: 320px;
+  border-radius: 18px;
+  border: 2px dashed rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gray);
+  font-weight: 600;
+}
+
+.drawing-result-card {
+  background: var(--dark);
+  border-radius: 16px;
+  padding: 10px;
+  width: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.drawing-result-card img {
+  width: 100%;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.drawing-result-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
 /* Results Screen */
 .results-content {
   max-width: 800px;

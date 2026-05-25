@@ -124,6 +124,7 @@ class HostClient extends LearnLoopClient {
     const labels = {
       drag_drop: "🎯 Drag & Drop",
       classify: "📂 Clasificar",
+      drawing: "🎨 Dibujo",
     };
     return labels[type] || "🎮 Juego";
   }
@@ -134,6 +135,8 @@ class HostClient extends LearnLoopClient {
 
     if (gameData?.mode === "senses_svg") {
       display.innerHTML = this.renderSensesHost(gameData);
+    } else if (payload.gameType === "drawing") {
+      display.innerHTML = this.renderDrawingHost(gameData);
     } else if (payload.gameType === "drag_drop") {
       display.innerHTML = this.renderDragDropHost(gameData);
     } else if (payload.gameType === "classify") {
@@ -184,6 +187,17 @@ class HostClient extends LearnLoopClient {
                 </div>
             </div>
         `;
+  }
+
+  renderDrawingHost(gameData) {
+    return `
+        <div class="drawing-host-preview">
+          <p class="drawing-host-prompt">${gameData.prompt || "Dibuja algo creativo."}</p>
+          <div class="drawing-host-canvas">
+            <span>Los jugadores estan dibujando...</span>
+          </div>
+        </div>
+      `;
   }
 
   renderClassifyHost(gameData) {
@@ -286,9 +300,22 @@ class HostClient extends LearnLoopClient {
     document.getElementById("result-title").textContent = `Resultados - Ronda ${payload.roundNumber}`;
 
     const solutionDisplay = document.getElementById("solution-display");
-    solutionDisplay.innerHTML = payload.correctAnswers
-      .map((ca) => `<span style="padding: 10px 20px; background: var(--gradient); border-radius: 10px;">✓</span>`)
-      .join("");
+    if (payload.drawings && payload.drawings.length) {
+      solutionDisplay.innerHTML = payload.drawings
+        .map(
+          (entry) => `
+            <div class="drawing-result-card">
+              <img src="${entry.drawing}" alt="Dibujo de ${entry.nickname}" />
+              <div class="drawing-result-name">${entry.nickname}</div>
+            </div>
+          `,
+        )
+        .join("");
+    } else {
+      solutionDisplay.innerHTML = (payload.correctAnswers || [])
+        .map(() => `<span style="padding: 10px 20px; background: var(--gradient); border-radius: 10px;">✓</span>`)
+        .join("");
+    }
 
     const podiumList = document.getElementById("podium-list");
     const medals = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣"];
@@ -371,8 +398,8 @@ document.addEventListener("DOMContentLoaded", () => {
   hostClient.connect();
 
   document.getElementById("create-room-btn").addEventListener("click", () => {
-    const rounds = 1;
-    const subjects = ["senses"];
+    const rounds = 2;
+    const subjects = ["senses", "drawing"];
 
     hostClient.rounds = rounds;
     hostClient.subjects = subjects;

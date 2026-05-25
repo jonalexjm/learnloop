@@ -94,8 +94,8 @@ wss.on("connection", (ws) => {
       switch (event) {
         case "CREATE_ROOM": {
           const pin = generatePIN();
-          const subjects = ["senses"];
-          const gameOrder = [0];
+          const subjects = ["senses", "drawing"];
+          const gameOrder = [0, 1];
 
           const session = {
             pin,
@@ -103,7 +103,7 @@ wss.on("connection", (ws) => {
             players: new Map(),
             state: "lobby",
             currentRound: 0,
-            totalRounds: 1,
+            totalRounds: gameOrder.length,
             rounds: [],
             gameHistory: [],
             createdAt: new Date().toISOString(),
@@ -217,9 +217,14 @@ wss.on("connection", (ws) => {
           const score = calculateScore(isCorrect, payload.timeRemaining, round.timeLimit, player.streak);
           player.totalScore += score;
 
-          const submittedCount = round.submissions?.size || 0;
           if (!round.submissions) round.submissions = new Set();
           round.submissions.add(ws);
+
+          if (round.answerMode === "drawing") {
+            if (!round.drawings) round.drawings = new Map();
+            const drawing = payload?.answers?.drawing || payload?.answers?.dataUrl || null;
+            round.drawings.set(ws, { nickname: player.nickname, drawing });
+          }
 
           session.host.send(
             JSON.stringify({
@@ -287,6 +292,7 @@ function startNextRound(session) {
     answerMode: games.answerMode || null,
     timeLimit: games.timeLimit,
     submissions: new Set(),
+    drawings: games.answerMode === "drawing" ? new Map() : null,
   };
 
   session.rounds.push(round);
@@ -345,15 +351,21 @@ function finishRound(session) {
   const top5 = sortedPlayers.slice(0, 5);
   const isLastRound = session.currentRound >= session.totalRounds;
 
+  const roundResultPayload = {
+    correctAnswers: round.gameData.correctAnswers,
+    top5,
+    roundNumber: round.number,
+    isLastRound: isLastRound,
+  };
+
+  if (round.answerMode === "drawing") {
+    roundResultPayload.drawings = Array.from(round.drawings.values()).filter((entry) => entry.drawing);
+  }
+
   session.host.send(
     JSON.stringify({
       event: "ROUND_RESULT",
-      payload: {
-        correctAnswers: round.gameData.correctAnswers,
-        top5,
-        roundNumber: round.number,
-        isLastRound: isLastRound,
-      },
+      payload: roundResultPayload,
     }),
   );
 
@@ -465,6 +477,11 @@ function validateAnswer(round, answers) {
 
   if (round.answerMode === "item_to_zone") {
     return validateItemToZoneAnswer(answers, gameData.correctAnswers);
+  }
+
+  if (round.answerMode === "drawing") {
+    const drawing = answers?.drawing || answers?.dataUrl || null;
+    return typeof drawing === "string" && drawing.startsWith("data:image/");
   }
 
   if (round.gameType === "drag_drop" || round.gameType === "classify") {
@@ -674,7 +691,7 @@ function getGameForRound(session, roundIndex) {
       name: "Five Senses",
       description: "Drag each sense to the correct body part.",
       type: "drag_drop",
-      timeLimit: 60,
+      timeLimit: 120,
       answerMode: "item_to_zone",
       data: {
         mode: "senses_svg",
@@ -701,6 +718,19 @@ function getGameForRound(session, roundIndex) {
           { itemId: "sense_taste", zoneId: "zone_mouth" },
           { itemId: "sense_touch", zoneId: "zone_hands" },
         ],
+      },
+    },
+    {
+      subject: "drawing",
+      name: "Dibuja tu idea",
+      description: "Dibuja algo relacionado con el tema en tu pantalla.",
+      type: "drawing",
+      timeLimit: 120,
+      answerMode: "drawing",
+      data: {
+        prompt: "Dibuja tu cosa favorita usando los sentidos.",
+        colors: ["#111827", "#ef4444", "#f59e0b", "#22c55e", "#06b6d4", "#8b5cf6"],
+        brushSizes: [4, 8, 12, 18],
       },
     },
   ];
